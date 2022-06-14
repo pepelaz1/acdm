@@ -1,19 +1,31 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+const { parseEther } = ethers.utils;
 
-describe("Greeter", function () {
-  it("Should return the new greeting once it's changed", async function () {
-    const Greeter = await ethers.getContractFactory("Greeter");
-    const greeter = await Greeter.deploy("Hello, world!");
-    await greeter.deployed();
+describe("ACDMPlatform", function () {
+  let acc1: any;
 
-    expect(await greeter.greet()).to.equal("Hello, world!");
+  let acc2: any;
 
-    const setGreetingTx = await greeter.setGreeting("Hola, mundo!");
+  let acc3: any;
 
-    // wait until the transaction is mined
-    await setGreetingTx.wait();
+  let acc4: any;
 
-    expect(await greeter.greet()).to.equal("Hola, mundo!");
+  let xxxtoken: any;
+
+  let acdmtoken: any;
+
+  step('init', async function() {
+    [acc1, acc2, acc3, acc4] = await ethers.getSigners()
+
+    // deploy XXX token
+    const Erc20Token = await ethers.getContractFactory('XXXToken', acc1)
+    xxxtoken = await Erc20Token.deploy(parseEther("10000"))
+    await xxxtoken.deployed()  
+
+     // deploy ACDM token
+     const ACDMToken = await ethers.getContractFactory('ACDMToken', acc1)
+     acdmtoken = await ACDMToken.deploy(parseEther("10000"))
+     await acdmtoken.deployed()  
   });
 });
