@@ -5,14 +5,14 @@ import "hardhat/console.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol"; 
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol"; 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./Erc20Token.sol";
+import "./XXXToken.sol";
 
 contract Staking {
     address private immutable owner;
 
     ERC20 private immutable lpToken;
 
-    Erc20Token private immutable rewardToken;
+    XXXToken private immutable rewardToken;
  
     uint256 private rewardPercent = 20;
 
@@ -40,7 +40,7 @@ contract Staking {
     constructor(address _lpAddress, address _rewardAddress)  {
         owner = msg.sender;
         lpToken = ERC20(_lpAddress);
-        rewardToken = Erc20Token(_rewardAddress);
+        rewardToken = XXXToken(_rewardAddress);
     }
 
     function stake(uint256 _amount) public {  

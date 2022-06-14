@@ -2,13 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "./Erc20Token.sol";
+import "./XXXToken.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Dao is AccessControl {
     bytes32 public constant CHAIRMAN_ROLE = keccak256("CHAIRMAN_ROLE");
 
-    Erc20Token private immutable token;
+    XXXToken private immutable token;
 
     uint256 private immutable minQuorum;
 
@@ -40,7 +40,7 @@ contract Dao is AccessControl {
     event ProposalDataExecuted(uint256 indexed id);
 
     constructor( address _token, uint256 _minQuorum, uint256 _duration) {
-        token = Erc20Token(_token);
+        token = XXXToken(_token);
         minQuorum = _minQuorum;
         duration = _duration;
          _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
