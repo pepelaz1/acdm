@@ -1,12 +1,13 @@
 import { expect } from "chai";
-import { BigNumber } from "ethers";
-import { ethers } from "hardhat";
-const hardhat = require("hardhat");
+//import { BigNumber } from "ethers";
+import { ethers, network } from "hardhat";
+//const hardhat = require("hardhat");
 const { parseEther, parseUnits } = ethers.utils;
 const { MaxUint256 } = ethers.constants;
 const routerAddress = process.env.UNISWAP_ROUTER_ADDRESS as string;
 const factoryAddress = process.env.UNISWAP_FACTORY_ADDRESS as string;
 const xxxtokenAddress = "0xad518536Ecb7e8677Dc9e821b26FEEe1Bb8Db3d0";
+const roundDuration = 60*60*24*3;
 
 describe("ACDMPlatform", function () {
   let acc1: any;
@@ -95,6 +96,11 @@ describe("ACDMPlatform", function () {
     await acdmtoken.grantRole(await acdmtoken.MINTER_ROLE(), platform.address)
     let tx = await platform.prepare();
     await tx.wait();
+
+    await acdmtoken.connect(acc1).approve(platform.address, MaxUint256);
+    await acdmtoken.connect(acc2).approve(platform.address, MaxUint256);
+    await acdmtoken.connect(acc3).approve(platform.address, MaxUint256);
+    await acdmtoken.connect(acc4).approve(platform.address, MaxUint256);
     // await acdmtoken.mint(platform.address, ethers.utils.parseUnits('100000', 6))
 
     //console.log(await acdmtoken.balanceOf(platform.address))
@@ -150,6 +156,8 @@ describe("ACDMPlatform", function () {
   });
 
   step('sale round 1', async function () {
+    //console.log(await acdmtoken.balanceOf(platform.address))
+
     let tx = await platform.buy({ value: parseEther('0.5') })
     await tx.wait()
 
@@ -164,7 +172,7 @@ describe("ACDMPlatform", function () {
     await tx.wait()
 
     expect(await acdmtoken.balanceOf(acc3.address)).to.equal(parseUnits("30000", 6))
-    
+
     // This finishes this round within
     await expect(platform.connect(acc4).buy({ value: parseEther('0.1') })).to.be.revertedWith("Only possible when it's SALE round")
 
@@ -172,8 +180,37 @@ describe("ACDMPlatform", function () {
   });
 
   step('trade round 1', async function () {
-    let tx = await platform.addOrder(parseUnits("10000", 6))
+    //console.log(await acdmtoken.balanceOf(platform.address))
+
+    let tx = await platform.checkRound()
     await tx.wait()
+
+    tx = await platform.addOrder(parseUnits("10000", 6))
+    await tx.wait()
+
+    tx = await platform.removeOrder(parseUnits("10000", 6))
+    await tx.wait()
+
+    tx = await platform.addOrder(parseUnits("30000", 6))
+    await tx.wait()
+
+    expect(await acdmtoken.balanceOf(platform.address)).to.equal(parseUnits("30000", 6))
+
+    tx = await platform.connect(acc2).redeemOrder(acc1.address, { value: parseEther('0.15') });
+    await tx.wait()
+
+    tx = await platform.connect(acc3).redeemOrder(acc1.address, { value: parseEther('0.05') });
+    await tx.wait()
+
+    await expect(platform.connect(acc4).redeemOrder(acc1.address, { value: parseEther('0.11') })).to.be.revertedWith("Not enough amount in orders")
+
+    await network.provider.send("evm_increaseTime", [roundDuration]) 
+  });
+
+  step('sale round 2', async function () {
+    let tx = await platform.checkRound()
+    await tx.wait()
+
 
   });
 });
