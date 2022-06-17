@@ -156,7 +156,8 @@ describe("ACDMPlatform", function () {
   });
 
   step('sale round 1', async function () {
-    console.log("Sale round 1:", (await acdmtoken.balanceOf(platform.address)).toString())
+   // console.log("Sale round 1 acdm price:", (await acdmtoken.balanceOf(platform.address)).toString())
+    console.log("Sale round 1 acdm price:", (await platform.acdmPrice()).toString())
 
     let tx = await platform.buy({ value: parseEther('0.5') })
     await tx.wait()
@@ -208,11 +209,51 @@ describe("ACDMPlatform", function () {
   });
 
   step('sale round 2', async function () {
-    console.log("Sale round 2:", (await acdmtoken.balanceOf(platform.address)).toString())
+    let tx = await platform.checkRound()
+    await tx.wait()
 
+    console.log("Sale round 2 acdm price:", (await platform.acdmPrice()).toString())
+    console.log("Sale round 2 acdm amount:", (await acdmtoken.balanceOf(platform.address)).toString())
+
+    tx = await platform.connect(acc4).buy({ value: parseEther('0.1') })
+    await tx.wait()
+
+    tx = await platform.connect(acc2).buy({ value: parseEther('0.2') })
+    await tx.wait()
+
+    tx = await platform.connect(acc3).buy({ value: parseEther('0.03') })
+    await tx.wait()
+
+    await network.provider.send("evm_increaseTime", [roundDuration]) 
+  });
+
+  step('trade round 2', async function () {
+    let tx = await platform.checkRound()
+    await tx.wait()
+
+    tx = await platform.connect(acc2).addOrder(parseUnits("20000", 6))
+    await tx.wait()
+
+    tx = await platform.connect(acc4).addOrder(parseUnits("5000", 6))
+    await tx.wait()
+
+    tx = await platform.connect(acc1).redeemOrder(acc2.address, { value: parseEther('0.1') });
+    await tx.wait()
+
+    tx = await platform.connect(acc3).redeemOrder(acc4.address, { value: parseEther('0.05') });
+    await tx.wait()
+    
+    await network.provider.send("evm_increaseTime", [roundDuration]) 
+  });
+
+  step('sale round 3', async function () {
     let tx = await platform.checkRound()
     await tx.wait()
 
 
+    console.log("Sale round 3 acdm price:", (await platform.acdmPrice()).toString())
+    console.log("Sale round 3 acdm amount:", (await acdmtoken.balanceOf(platform.address)).toString())
+
   });
+  
 });

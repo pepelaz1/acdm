@@ -21,7 +21,7 @@ contract ACDMPlatform {
 
     ACDMToken private acdmToken;
 
-    uint256 private acdmPrice = 1e7;
+    uint256 public acdmPrice = 1e7;
 
     mapping(address => uint256) private orders;
 
@@ -112,9 +112,19 @@ contract ACDMPlatform {
         } else if (currentRound.type_ == RoundType.TRADE) {
             currentRound.type_ = RoundType.SALE;
             acdmPrice = (acdmPrice * 103) / 100 + 4e6;
-            //console.log("tradeAmount: %d", tradeAmount);
             uint256 mintAmount = tradeAmount / acdmPrice;
+            
+
+            // console.log("amountBefore: %d", acdmToken.balanceOf(address(this)));
+
+            // console.log(
+            //     "tradeAmount: %d, price: %d, mintAmount: %d",
+            //     tradeAmount,
+            //     acdmPrice,
+            //     mintAmount
+            // );
             acdmToken.mint(address(this), mintAmount);
+            //console.log("amountAfter: %d", acdmToken.balanceOf(address(this)));
             tradeAmount = 0;
         }
         currentRound.startTime = block.timestamp;
