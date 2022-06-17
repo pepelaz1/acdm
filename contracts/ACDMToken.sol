@@ -10,8 +10,8 @@ contract ACDMToken is ERC20, ERC20Burnable, AccessControl {
 
     constructor(uint256 _initialSupply) ERC20("ACADEM Coin", "ACDM") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(MINTER_ROLE, msg.sender);
-        _mint(msg.sender, _initialSupply);
+        grantRole(MINTER_ROLE, msg.sender);
+        mint(msg.sender, _initialSupply);
     }
 
     function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {

@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { loadFixture } from "ethereum-waffle";
 //import { BigNumber } from "ethers";
 import { ethers, network } from "hardhat";
 //const hardhat = require("hardhat");
@@ -94,8 +95,8 @@ describe("ACDMPlatform", function () {
     await dao.deployed()
 
     await acdmtoken.grantRole(await acdmtoken.MINTER_ROLE(), platform.address)
-    let tx = await platform.prepare();
-    await tx.wait();
+    let tx = await acdmtoken.mint(platform.address, parseUnits('100000', 6));
+    await tx.wait()
 
     await acdmtoken.connect(acc1).approve(platform.address, MaxUint256);
     await acdmtoken.connect(acc2).approve(platform.address, MaxUint256);

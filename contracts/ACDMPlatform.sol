@@ -43,14 +43,10 @@ contract ACDMPlatform {
 
     constructor(address _acdmAddress) {
         acdmToken = ACDMToken(_acdmAddress);
-    }
-
-    function prepare() public {
         currentRound = Round({
             type_: RoundType.SALE,
             startTime: block.timestamp
         });
-        acdmToken.mint(address(this), INITIAL_ACDM_AMOUNT);
     }
 
     function buy() public payable onlyRound(RoundType.SALE) {
@@ -124,7 +120,7 @@ contract ACDMPlatform {
             //     mintAmount
             // );
             acdmToken.mint(address(this), mintAmount);
-            //console.log("amountAfter: %d", acdmToken.balanceOf(address(this)));
+           // console.log("amountAfter: %d", acdmToken.balanceOf(address(this)));
             tradeAmount = 0;
         }
         currentRound.startTime = block.timestamp;
