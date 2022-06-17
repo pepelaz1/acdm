@@ -54,6 +54,8 @@ contract ACDMPlatform {
         checkRound();
     }
 
+    function buy(uint256 _amount) public payable onlyRound(RoundType.SALE) {}
+
     function print() public view {
         console.log(
             "type: %d, time: %d",
@@ -89,6 +91,12 @@ contract ACDMPlatform {
         checkRound();
     }
 
+    function redeemOrder(address payable _seller, uint256 _amount)
+        public
+        payable
+        onlyRound(RoundType.TRADE)
+    {}
+
     function checkRound() public {
         if (
             block.timestamp - currentRound.startTime > 3 days ||
@@ -109,7 +117,6 @@ contract ACDMPlatform {
             currentRound.type_ = RoundType.SALE;
             acdmPrice = (acdmPrice * 103) / 100 + 4e6;
             uint256 mintAmount = tradeAmount / acdmPrice;
-            
 
             // console.log("amountBefore: %d", acdmToken.balanceOf(address(this)));
 
@@ -120,7 +127,7 @@ contract ACDMPlatform {
             //     mintAmount
             // );
             acdmToken.mint(address(this), mintAmount);
-           // console.log("amountAfter: %d", acdmToken.balanceOf(address(this)));
+            // console.log("amountAfter: %d", acdmToken.balanceOf(address(this)));
             tradeAmount = 0;
         }
         currentRound.startTime = block.timestamp;
