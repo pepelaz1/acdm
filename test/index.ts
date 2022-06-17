@@ -156,7 +156,7 @@ describe("ACDMPlatform", function () {
   });
 
   step('sale round 1', async function () {
-    //console.log(await acdmtoken.balanceOf(platform.address))
+    console.log("Sale round 1:", (await acdmtoken.balanceOf(platform.address)).toString())
 
     let tx = await platform.buy({ value: parseEther('0.5') })
     await tx.wait()
@@ -176,7 +176,7 @@ describe("ACDMPlatform", function () {
     // This finishes this round within
     await expect(platform.connect(acc4).buy({ value: parseEther('0.1') })).to.be.revertedWith("Only possible when it's SALE round")
 
-    expect(await acdmtoken.balanceOf(platform.address)).to.equal(0)
+     expect(await acdmtoken.balanceOf(platform.address)).to.equal(0)
   });
 
   step('trade round 1', async function () {
@@ -208,6 +208,8 @@ describe("ACDMPlatform", function () {
   });
 
   step('sale round 2', async function () {
+    console.log("Sale round 2:", (await acdmtoken.balanceOf(platform.address)).toString())
+
     let tx = await platform.checkRound()
     await tx.wait()
 

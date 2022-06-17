@@ -5,7 +5,6 @@ import "hardhat/console.sol";
 import "./ACDMToken.sol";
 
 contract ACDMPlatform {
-
     enum RoundType {
         SALE,
         TRADE
@@ -22,11 +21,25 @@ contract ACDMPlatform {
 
     ACDMToken private acdmToken;
 
-    uint256 private acdmPrice;
+    uint256 private acdmPrice = 1e7;
 
     mapping(address => uint256) private orders;
 
     uint256 private tradeAmount;
+
+    modifier onlyRound(RoundType _type) {
+        require(
+            currentRound.type_ == _type,
+            string(
+                abi.encodePacked(
+                    "Only possible when it's ",
+                    _type == RoundType.SALE ? "SALE" : "ROUND",
+                    " round"
+                )
+            )
+        );
+        _;
+    }
 
     constructor(address _acdmAddress) {
         acdmToken = ACDMToken(_acdmAddress);
@@ -37,15 +50,10 @@ contract ACDMPlatform {
             type_: RoundType.SALE,
             startTime: block.timestamp
         });
-        acdmPrice = 1e7;
         acdmToken.mint(address(this), INITIAL_ACDM_AMOUNT);
     }
 
-    function buy() public payable {
-        require(
-            currentRound.type_ == RoundType.SALE,
-            "Only possible when it's SALE round"
-        );
+    function buy() public payable onlyRound(RoundType.SALE) {
         acdmToken.transfer(msg.sender, msg.value / acdmPrice);
         checkRound();
     }
@@ -58,32 +66,23 @@ contract ACDMPlatform {
         );
     }
 
-    function addOrder(uint256 _amount) public {
-        require(
-            currentRound.type_ == RoundType.TRADE,
-            "Only possible when it's TRADE round"
-        );
+    function addOrder(uint256 _amount) public onlyRound(RoundType.TRADE) {
         acdmToken.transferFrom(msg.sender, address(this), _amount);
         orders[msg.sender] += _amount;
         checkRound();
     }
 
-    function removeOrder(uint256 _amount) public {
-        require(
-            currentRound.type_ == RoundType.TRADE,
-            "Only possible when it's TRADE round"
-        );
+    function removeOrder(uint256 _amount) public onlyRound(RoundType.TRADE) {
         acdmToken.transfer(msg.sender, _amount);
         orders[msg.sender] -= _amount;
         checkRound();
     }
 
-    function redeemOrder(address payable _seller) public payable {
-        require(
-            currentRound.type_ == RoundType.TRADE,
-            "Only possible when it's TRADE round"
-        );
-
+    function redeemOrder(address payable _seller)
+        public
+        payable
+        onlyRound(RoundType.TRADE)
+    {
         _seller.transfer(msg.value);
         uint256 amount = msg.value / acdmPrice;
         // console.log("amount: %d, orders[_seller]: %d", amount, orders[_seller]);
@@ -112,11 +111,11 @@ contract ACDMPlatform {
             currentRound.type_ = RoundType.TRADE;
         } else if (currentRound.type_ == RoundType.TRADE) {
             currentRound.type_ = RoundType.SALE;
-            acdmPrice = (acdmPrice * 103)/100 + 4e6;
+            acdmPrice = (acdmPrice * 103) / 100 + 4e6;
             //console.log("tradeAmount: %d", tradeAmount);
             uint256 mintAmount = tradeAmount / acdmPrice;
             acdmToken.mint(address(this), mintAmount);
-            tradeAmount = 0; 
+            tradeAmount = 0;
         }
         currentRound.startTime = block.timestamp;
         //print();
