@@ -8,7 +8,7 @@ const { MaxUint256 } = ethers.constants;
 const routerAddress = process.env.UNISWAP_ROUTER_ADDRESS as string;
 const factoryAddress = process.env.UNISWAP_FACTORY_ADDRESS as string;
 const xxxtokenAddress = "0xad518536Ecb7e8677Dc9e821b26FEEe1Bb8Db3d0";
-const roundDuration = 60*60*24*3;
+const roundDuration = 60 * 60 * 24 * 3;
 
 describe("ACDMPlatform", function () {
   let acc1: any;
@@ -157,28 +157,30 @@ describe("ACDMPlatform", function () {
   });
 
   step('sale round 1', async function () {
-   // console.log("Sale round 1 acdm price:", (await acdmtoken.balanceOf(platform.address)).toString())
+    // console.log("Sale round 1 acdm price:", (await acdmtoken.balanceOf(platform.address)).toString())
     console.log("Sale round 1 acdm price:", (await platform.acdmPrice()).toString())
 
-    let tx = await platform.buy({ value: parseEther('0.5') })
+    await expect(platform["buy(uint256)"](parseUnits("50000", 6), { value: parseEther('0.4') })).to.be.revertedWith("Not enough ether sent")
+
+    let tx = await platform["buy(uint256)"](parseUnits("50000", 6), { value: parseEther('1.0') })
     await tx.wait()
 
     expect(await acdmtoken.balanceOf(acc1.address)).to.equal(parseUnits("70000", 6))
 
-    tx = await platform.connect(acc2).buy({ value: parseEther('0.2') })
+    tx = await platform.connect(acc2)["buy(uint256)"](parseUnits("20000", 6), { value: parseEther('1.0') })
     await tx.wait()
 
     expect(await acdmtoken.balanceOf(acc2.address)).to.equal(parseUnits("20000", 6))
 
-    tx = await platform.connect(acc3).buy({ value: parseEther('0.3') })
+    tx = await platform.connect(acc3)["buy(uint256)"](parseUnits("30000", 6),{ value: parseEther('1.0') })
     await tx.wait()
 
     expect(await acdmtoken.balanceOf(acc3.address)).to.equal(parseUnits("30000", 6))
 
     // This finishes this round within
-    await expect(platform.connect(acc4).buy({ value: parseEther('0.1') })).to.be.revertedWith("Only possible when it's SALE round")
+    await expect(platform.connect(acc4)["buy(uint256)"](parseUnits("10000", 6),{ value: parseEther('1.0') })).to.be.revertedWith("Only possible when it's SALE round")
 
-     expect(await acdmtoken.balanceOf(platform.address)).to.equal(0)
+    expect(await acdmtoken.balanceOf(platform.address)).to.equal(0)
   });
 
   step('trade round 1', async function () {
@@ -206,7 +208,7 @@ describe("ACDMPlatform", function () {
 
     await expect(platform.connect(acc4).redeemOrder(acc1.address, { value: parseEther('0.11') })).to.be.revertedWith("Not enough amount in orders")
 
-    await network.provider.send("evm_increaseTime", [roundDuration]) 
+    await network.provider.send("evm_increaseTime", [roundDuration])
   });
 
   step('sale round 2', async function () {
@@ -216,16 +218,16 @@ describe("ACDMPlatform", function () {
     console.log("Sale round 2 acdm price:", (await platform.acdmPrice()).toString())
     console.log("Sale round 2 acdm amount:", (await acdmtoken.balanceOf(platform.address)).toString())
 
-    tx = await platform.connect(acc4).buy({ value: parseEther('0.1') })
+    tx = await platform.connect(acc4)["buy(uint256)"](parseUnits("5000", 6), { value: parseEther('1.0') })
     await tx.wait()
 
-    tx = await platform.connect(acc2).buy({ value: parseEther('0.2') })
+    tx = await platform.connect(acc2)["buy(uint256)"](parseUnits("6000", 6),{ value: parseEther('1.0') })
     await tx.wait()
 
-    tx = await platform.connect(acc3).buy({ value: parseEther('0.03') })
+    tx = await platform.connect(acc3)["buy(uint256)"](parseUnits("3000", 6),{ value: parseEther('1.0') })
     await tx.wait()
 
-    await network.provider.send("evm_increaseTime", [roundDuration]) 
+    await network.provider.send("evm_increaseTime", [roundDuration])
   });
 
   step('trade round 2', async function () {
@@ -243,8 +245,8 @@ describe("ACDMPlatform", function () {
 
     tx = await platform.connect(acc3).redeemOrder(acc4.address, { value: parseEther('0.05') });
     await tx.wait()
-    
-    await network.provider.send("evm_increaseTime", [roundDuration]) 
+
+    await network.provider.send("evm_increaseTime", [roundDuration])
   });
 
   step('sale round 3', async function () {
@@ -256,5 +258,5 @@ describe("ACDMPlatform", function () {
     console.log("Sale round 3 acdm amount:", (await acdmtoken.balanceOf(platform.address)).toString())
 
   });
-  
+
 });
