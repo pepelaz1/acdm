@@ -203,10 +203,10 @@ describe("ACDMPlatform", function () {
     tx = await platform.connect(acc2)["redeemOrder(address,uint256)"](acc1.address, parseUnits("10000", 6), { value: parseEther('1.0') });
     await tx.wait()
 
-    tx = await platform.connect(acc3).redeemOrder(acc1.address, { value: parseEther('0.05') });
+    tx = await platform.connect(acc3)["redeemOrder(address,uint256)"](acc1.address, parseUnits("15000", 6), { value: parseEther('1.0') });
     await tx.wait()
 
-    await expect(platform.connect(acc4).redeemOrder(acc1.address, { value: parseEther('0.11') })).to.be.revertedWith("Not enough amount in orders")
+    await expect(platform.connect(acc4)["redeemOrder(address,uint256)"](acc1.address, parseUnits("11000", 6), { value: parseEther('1.0') })).to.be.revertedWith("Not enough amount in orders")
 
     await network.provider.send("evm_increaseTime", [roundDuration])
   });
@@ -240,10 +240,10 @@ describe("ACDMPlatform", function () {
     tx = await platform.connect(acc4).addOrder(parseUnits("5000", 6))
     await tx.wait()
 
-    tx = await platform.connect(acc1).redeemOrder(acc2.address, { value: parseEther('0.1') });
+    tx = await platform.connect(acc1)["redeemOrder(address,uint256)"](acc2.address,  parseUnits("5000", 6), { value: parseEther('1.0') });
     await tx.wait()
 
-    tx = await platform.connect(acc3).redeemOrder(acc4.address, { value: parseEther('0.05') });
+    tx = await platform.connect(acc3)["redeemOrder(address,uint256)"](acc4.address,  parseUnits("2000", 6), { value: parseEther('1.0') });
     await tx.wait()
 
     await network.provider.send("evm_increaseTime", [roundDuration])
