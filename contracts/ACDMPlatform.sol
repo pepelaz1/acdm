@@ -15,8 +15,6 @@ contract ACDMPlatform {
         uint256 startTime;
     }
 
-    uint256 private constant INITIAL_ACDM_AMOUNT = 100000e6;
-
     Round private currentRound;
 
     ACDMToken private acdmToken;
@@ -56,20 +54,11 @@ contract ACDMPlatform {
 
     function buy(uint256 _amount) public payable onlyRound(RoundType.SALE) {
         uint256 eth = _amount * acdmPrice;
-        //console.log("eth %d", eth);
         require(msg.value >= eth, "Not enough ether sent");
         acdmToken.transfer(msg.sender, _amount);
         uint256 surplus = msg.value - eth;
         payable(msg.sender).transfer(surplus);
         checkRound();
-    }
-
-    function print() public view {
-        console.log(
-            "type: %d, time: %d",
-            currentRound.type_ == RoundType.SALE ? 0 : 1,
-            currentRound.startTime
-        );
     }
 
     function addOrder(uint256 _amount) public onlyRound(RoundType.TRADE) {
@@ -91,7 +80,6 @@ contract ACDMPlatform {
     {
         _seller.transfer(msg.value);
         uint256 amount = msg.value / acdmPrice;
-        // console.log("amount: %d, orders[_seller]: %d", amount, orders[_seller]);
         require(orders[_seller] >= amount, "Not enough amount in orders");
         acdmToken.transfer(msg.sender, amount);
         orders[_seller] -= amount;
@@ -122,13 +110,11 @@ contract ACDMPlatform {
             (currentRound.type_ == RoundType.SALE &&
                 acdmToken.balanceOf(address(this)) == 0)
         ) {
-            //print();
             finishRound();
         }
     }
 
     function finishRound() private {
-        //console.log("finish round");
         if (currentRound.type_ == RoundType.SALE) {
             acdmToken.burn(acdmToken.balanceOf(address(this)));
             currentRound.type_ = RoundType.TRADE;
@@ -136,20 +122,9 @@ contract ACDMPlatform {
             currentRound.type_ = RoundType.SALE;
             acdmPrice = (acdmPrice * 103) / 100 + 4e6;
             uint256 mintAmount = tradeAmount / acdmPrice;
-
-            // console.log("amountBefore: %d", acdmToken.balanceOf(address(this)));
-
-            // console.log(
-            //     "tradeAmount: %d, price: %d, mintAmount: %d",
-            //     tradeAmount,
-            //     acdmPrice,
-            //     mintAmount
-            // );
             acdmToken.mint(address(this), mintAmount);
-            // console.log("amountAfter: %d", acdmToken.balanceOf(address(this)));
             tradeAmount = 0;
         }
         currentRound.startTime = block.timestamp;
-        //print();
     }
 }

@@ -9,6 +9,7 @@ const routerAddress = process.env.UNISWAP_ROUTER_ADDRESS as string;
 const factoryAddress = process.env.UNISWAP_FACTORY_ADDRESS as string;
 const xxxtokenAddress = "0xad518536Ecb7e8677Dc9e821b26FEEe1Bb8Db3d0";
 const roundDuration = 60 * 60 * 24 * 3;
+const daoDuration = 60 * 60 * 24 * 3;
 
 describe("ACDMPlatform", function () {
   let acc1: any;
@@ -83,7 +84,7 @@ describe("ACDMPlatform", function () {
 
   step('deploy dao', async function () {
     const Dao = await ethers.getContractFactory('Dao', acc1)
-    dao = await Dao.deploy(lpToken.address, parseEther('400'), 60 * 60 * 24 * 3)
+    dao = await Dao.deploy(staking.address, lpToken.address, parseUnits('7', 15), 60 * 60 * 24 * 3)
     await dao.deployed()
 
     await dao.grantRole(await dao.CHAIRMAN_ROLE(), acc1.address)
@@ -172,13 +173,13 @@ describe("ACDMPlatform", function () {
 
     expect(await acdmtoken.balanceOf(acc2.address)).to.equal(parseUnits("20000", 6))
 
-    tx = await platform.connect(acc3)["buy(uint256)"](parseUnits("30000", 6),{ value: parseEther('1.0') })
+    tx = await platform.connect(acc3)["buy(uint256)"](parseUnits("30000", 6), { value: parseEther('1.0') })
     await tx.wait()
 
     expect(await acdmtoken.balanceOf(acc3.address)).to.equal(parseUnits("30000", 6))
 
     // This finishes this round within
-    await expect(platform.connect(acc4)["buy(uint256)"](parseUnits("10000", 6),{ value: parseEther('1.0') })).to.be.revertedWith("Only possible when it's SALE round")
+    await expect(platform.connect(acc4)["buy(uint256)"](parseUnits("10000", 6), { value: parseEther('1.0') })).to.be.revertedWith("Only possible when it's SALE round")
 
     expect(await acdmtoken.balanceOf(platform.address)).to.equal(0)
   });
@@ -221,10 +222,10 @@ describe("ACDMPlatform", function () {
     tx = await platform.connect(acc4)["buy(uint256)"](parseUnits("5000", 6), { value: parseEther('1.0') })
     await tx.wait()
 
-    tx = await platform.connect(acc2)["buy(uint256)"](parseUnits("6000", 6),{ value: parseEther('1.0') })
+    tx = await platform.connect(acc2)["buy(uint256)"](parseUnits("6000", 6), { value: parseEther('1.0') })
     await tx.wait()
 
-    tx = await platform.connect(acc3)["buy(uint256)"](parseUnits("3000", 6),{ value: parseEther('1.0') })
+    tx = await platform.connect(acc3)["buy(uint256)"](parseUnits("3000", 6), { value: parseEther('1.0') })
     await tx.wait()
 
     await network.provider.send("evm_increaseTime", [roundDuration])
@@ -240,10 +241,10 @@ describe("ACDMPlatform", function () {
     tx = await platform.connect(acc4).addOrder(parseUnits("5000", 6))
     await tx.wait()
 
-    tx = await platform.connect(acc1)["redeemOrder(address,uint256)"](acc2.address,  parseUnits("5000", 6), { value: parseEther('1.0') });
+    tx = await platform.connect(acc1)["redeemOrder(address,uint256)"](acc2.address, parseUnits("5000", 6), { value: parseEther('1.0') });
     await tx.wait()
 
-    tx = await platform.connect(acc3)["redeemOrder(address,uint256)"](acc4.address,  parseUnits("2000", 6), { value: parseEther('1.0') });
+    tx = await platform.connect(acc3)["redeemOrder(address,uint256)"](acc4.address, parseUnits("2000", 6), { value: parseEther('1.0') });
     await tx.wait()
 
     await network.provider.send("evm_increaseTime", [roundDuration])
@@ -253,9 +254,49 @@ describe("ACDMPlatform", function () {
     let tx = await platform.checkRound()
     await tx.wait()
 
-
     console.log("Sale round 3 acdm price:", (await platform.acdmPrice()).toString())
     console.log("Sale round 3 acdm amount:", (await acdmtoken.balanceOf(platform.address)).toString())
+
+  });
+
+  step('voting to increase staking period', async function () {
+    var abi1 = [{
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_unstakeDelay",
+          "type": "uint256"
+        }
+      ],
+      "name": "setUnstakeDelay",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+    ];
+
+    let newDelay = 4*24*60*60
+
+    const calldata = new ethers.utils.Interface(abi1).encodeFunctionData('setUnstakeDelay', [newDelay]);
+
+    let tx = await dao.addProposal(staking.address, calldata, 'increase staking period')
+    await tx.wait()
+
+    tx = await dao.connect(acc1).vote(0)
+    await tx.wait()
+
+    tx = await dao.connect(acc2).vote(0)
+    await tx.wait()
+
+    tx = await dao.connect(acc4).vote(0)
+    await tx.wait()
+
+    await network.provider.send("evm_increaseTime", [daoDuration])
+
+    tx = await dao.finishProposal(0)
+    await tx.wait()
+
+    expect(await staking.getUnstakeDelay()).to.equal(newDelay)
 
   });
 
