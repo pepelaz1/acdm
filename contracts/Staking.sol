@@ -14,18 +14,18 @@ contract Staking {
 
     XXXToken private immutable rewardToken;
 
-    uint256 private rewardPercent = 20;
+    uint256 private rewardPercent = 3;
 
     mapping(address => uint256) public balances;
 
     // times when stacking begins
     mapping(address => uint256) startTimes;
 
-    // unstake delay in minutes
+    // unstake delay
     uint256 private unstakeDelay = 3 days;
 
-    // reward delay in minutes
-    uint256 private rewardDelay = 20;
+    // reward delay
+    uint256 private rewardDelay = 7 days;
 
     modifier onlyOwner() {
         require(
@@ -37,7 +37,7 @@ contract Staking {
 
     modifier timePassed(uint256 _duration) {
         require(
-            block.timestamp > startTimes[msg.sender] + _duration * 60,
+            block.timestamp > startTimes[msg.sender] + _duration,
             "Time delay has not passed yet"
         );
         _;
@@ -55,7 +55,7 @@ contract Staking {
 
         if (
             startTimes[msg.sender] != 0 &&
-            block.timestamp > startTimes[msg.sender] + rewardDelay * 60
+            block.timestamp > startTimes[msg.sender] + rewardDelay
         ) {
             claim();
         } else {
@@ -64,7 +64,7 @@ contract Staking {
     }
 
     function unstake() public timePassed(unstakeDelay) {
-        if (block.timestamp > startTimes[msg.sender] + rewardDelay * 60) {
+        if (block.timestamp > startTimes[msg.sender] + rewardDelay) {
             claim();
         }
         lpToken.transfer(msg.sender, balances[msg.sender]);
@@ -72,11 +72,10 @@ contract Staking {
     }
 
     function claim() public {
-        uint256 cnt = ((block.timestamp - startTimes[msg.sender]) / 60) /
-            rewardDelay;
+        uint256 cnt = (block.timestamp - startTimes[msg.sender]) / rewardDelay;
         uint256 totalReward = (balances[msg.sender] * rewardPercent * cnt) /
             100;
-        rewardToken.transfer(msg.sender, totalReward);
+        rewardToken.mint(msg.sender, totalReward);
         startTimes[msg.sender] = block.timestamp;
     }
 

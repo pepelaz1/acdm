@@ -80,6 +80,8 @@ describe("ACDMPlatform", function () {
     await lpToken.connect(acc2).approve(staking.address, MaxUint256);
     await lpToken.connect(acc3).approve(staking.address, MaxUint256);
     await lpToken.connect(acc4).approve(staking.address, MaxUint256);
+
+    await xxxtoken.grantRole(await xxxtoken.MINTER_ROLE(), staking.address)
   });
 
   step('deploy dao', async function () {
@@ -260,7 +262,7 @@ describe("ACDMPlatform", function () {
   });
 
   step('voting to increase staking period', async function () {
-    var abi1 = [{
+    var abi = [{
       "inputs": [
         {
           "internalType": "uint256",
@@ -275,9 +277,9 @@ describe("ACDMPlatform", function () {
     }
     ];
 
-    let newDelay = 4*24*60*60
+    let newDelay = 4 * 24 * 60 * 60
 
-    const calldata = new ethers.utils.Interface(abi1).encodeFunctionData('setUnstakeDelay', [newDelay]);
+    const calldata = new ethers.utils.Interface(abi).encodeFunctionData('setUnstakeDelay', [newDelay]);
 
     let tx = await dao.addProposal(staking.address, calldata, 'increase staking period')
     await tx.wait()
@@ -298,6 +300,21 @@ describe("ACDMPlatform", function () {
 
     expect(await staking.getUnstakeDelay()).to.equal(newDelay)
 
+  });
+
+
+  step('withdraw staking rewards', async function () {
+    let tx = await staking.connect(acc1).claim();
+    await tx.wait()
+
+    tx = await staking.connect(acc2).claim();
+    await tx.wait()
+
+    tx = await staking.connect(acc3).claim();
+    await tx.wait()
+
+    tx = await staking.connect(acc4).claim();
+    await tx.wait()
   });
 
 });
