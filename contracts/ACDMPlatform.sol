@@ -56,18 +56,11 @@ contract ACDMPlatform {
 
     function buy(uint256 _amount) public payable onlyRound(RoundType.SALE) {
         uint256 eth = _amount * acdmPrice;
-        console.log("eth %d", eth);
+        //console.log("eth %d", eth);
         require(msg.value >= eth, "Not enough ether sent");
         acdmToken.transfer(msg.sender, _amount);
         uint256 surplus = msg.value - eth;
-        (bool success, bytes memory returnData) = payable(msg.sender).call{
-            value: surplus
-        }("");
-        if (success == false) {
-            assembly {
-                revert(add(returnData, 32), mload(returnData))
-            }
-        }
+        payable(msg.sender).transfer(surplus);
         checkRound();
     }
 
@@ -106,11 +99,22 @@ contract ACDMPlatform {
         checkRound();
     }
 
-    // function redeemOrder(address payable _seller, uint256 _amount)
-    //     public
-    //     payable
-    //     onlyRound(RoundType.TRADE)
-    // {}
+    function redeemOrder(address payable _seller, uint256 _amount)
+        public
+        payable
+        onlyRound(RoundType.TRADE)
+    {    
+        uint256 eth = _amount * acdmPrice;
+        require(msg.value >= eth, "Not enough ether sent");
+        require(orders[_seller] >= _amount, "Not enough amount in orders");
+        _seller.transfer(eth);
+         acdmToken.transfer(msg.sender, _amount);
+        orders[_seller] -= _amount;
+        tradeAmount += eth;
+        uint256 surplus = msg.value - eth;
+        payable(msg.sender).transfer(surplus);
+        checkRound();
+    }
 
     function checkRound() public {
         if (

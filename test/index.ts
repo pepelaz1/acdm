@@ -200,7 +200,7 @@ describe("ACDMPlatform", function () {
 
     expect(await acdmtoken.balanceOf(platform.address)).to.equal(parseUnits("30000", 6))
 
-    tx = await platform.connect(acc2).redeemOrder(acc1.address, { value: parseEther('0.15') });
+    tx = await platform.connect(acc2)["redeemOrder(address,uint256)"](acc1.address, parseUnits("10000", 6), { value: parseEther('1.0') });
     await tx.wait()
 
     tx = await platform.connect(acc3).redeemOrder(acc1.address, { value: parseEther('0.05') });
