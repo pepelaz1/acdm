@@ -258,7 +258,6 @@ describe("ACDMPlatform", function () {
     await tx.wait()
 
 
-
     tx = await platform.connect(acc3)["redeemOrder(address,uint256)"](acc1.address, parseUnits("15000", 6), { value: parseEther('1.0') });
     await tx.wait()
 
