@@ -23,6 +23,16 @@ contract ACDMPlatform {
 
     uint256 public acdmPrice = 1e7;
 
+    uint256 public saleComission1 = 50;
+
+    uint256 public saleComission2 = 30;
+
+    uint256 public tradeComission1 = 25;
+
+    uint256 public tradeComission2 = 25;
+
+    address public specialAddress;
+
     Round private currentRound;
 
     mapping(address => PlatformUser) public platformUsers;
@@ -47,8 +57,9 @@ contract ACDMPlatform {
         _;
     }
 
-    constructor(address _acdmAddress) {
+    constructor(address _acdmAddress, address _specialAddress) {
         acdmToken = ACDMToken(_acdmAddress);
+        specialAddress = _specialAddress;
         currentRound = Round({
             type_: RoundType.SALE,
             startTime: block.timestamp
@@ -78,6 +89,7 @@ contract ACDMPlatform {
 
     function buy() public payable onlyRound(RoundType.SALE) {
         acdmToken.transfer(msg.sender, msg.value / acdmPrice);
+        distributeSale(msg.sender, msg.value);
         checkRound();
     }
 
@@ -85,6 +97,7 @@ contract ACDMPlatform {
         uint256 eth = _amount * acdmPrice;
         require(msg.value >= eth, "Not enough ether sent");
         acdmToken.transfer(msg.sender, _amount);
+        distributeSale(msg.sender, eth);
         uint256 surplus = msg.value - eth;
         payable(msg.sender).transfer(surplus);
         checkRound();
@@ -107,10 +120,11 @@ contract ACDMPlatform {
         payable
         onlyRound(RoundType.TRADE)
     {
-        _seller.transfer(msg.value);
         uint256 amount = msg.value / acdmPrice;
         require(orders[_seller] >= amount, "Not enough amount in orders");
         acdmToken.transfer(msg.sender, amount);
+        // _seller.transfer(msg.value);
+        distributeTrade(_seller, msg.value);
         orders[_seller] -= amount;
         tradeAmount += msg.value;
         checkRound();
@@ -124,8 +138,9 @@ contract ACDMPlatform {
         uint256 eth = _amount * acdmPrice;
         require(msg.value >= eth, "Not enough ether sent");
         require(orders[_seller] >= _amount, "Not enough amount in orders");
-        _seller.transfer(eth);
         acdmToken.transfer(msg.sender, _amount);
+        //_seller.transfer(eth);
+        distributeTrade(_seller, eth);
         orders[_seller] -= _amount;
         tradeAmount += eth;
         uint256 surplus = msg.value - eth;
@@ -155,5 +170,36 @@ contract ACDMPlatform {
             tradeAmount = 0;
         }
         currentRound.startTime = block.timestamp;
+    }
+
+    function distributeSale(address _addr, uint256 _amountEth) private {
+        PlatformUser memory platformUser = platformUsers[_addr];
+        uint256 comission = 0;
+        if (platformUser.referer1 != address(0)) {
+            comission = (_amountEth * saleComission1) / 1000;
+            payable(platformUser.referer1).transfer(comission);
+            if (platformUser.referer2 != address(0)) {
+                comission = (_amountEth * saleComission2) / 1000;
+                payable(platformUser.referer2).transfer(comission);
+            }
+        }
+    }
+
+    function distributeTrade(address _addr, uint256 _amountEth) private {
+        PlatformUser memory platformUser = platformUsers[_addr];   
+        uint256 comission1 = (_amountEth * tradeComission1) / 1000;
+        uint256 comission2 = (_amountEth * tradeComission2) / 1000;
+        uint256 value = _amountEth - comission1 - comission2;
+        if (platformUser.referer1 != address(0)) {         
+            payable(platformUser.referer1).transfer(comission1);     
+            if (platformUser.referer2 != address(0)) {            
+                payable(platformUser.referer2).transfer(comission2);
+            } else {
+                payable(specialAddress).transfer(comission2);
+            }
+        } else {
+            payable(specialAddress).transfer(comission1 + comission2);
+        }
+        payable(_addr).transfer(value);
     }
 }

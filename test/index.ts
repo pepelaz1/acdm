@@ -20,6 +20,8 @@ describe("ACDMPlatform", function () {
 
   let acc4: any;
 
+  let acc5: any;
+
   let xxxtoken: any;
 
   let acdmtoken: any;
@@ -37,7 +39,7 @@ describe("ACDMPlatform", function () {
   let platform: any;
 
   step('deploy tokens', async function () {
-    [acc1, acc2, acc3, acc4] = await ethers.getSigners()
+    [acc1, acc2, acc3, acc4, acc5] = await ethers.getSigners()
 
     //deploy XXX token
     const Erc20Token = await ethers.getContractFactory('XXXToken', acc1)
@@ -94,7 +96,7 @@ describe("ACDMPlatform", function () {
 
   step('deploy platform', async function () {
     const Platform = await ethers.getContractFactory('ACDMPlatform', acc1)
-    platform = await Platform.deploy(acdmtoken.address)
+    platform = await Platform.deploy(acdmtoken.address, acc5.address)
     await dao.deployed()
 
     await acdmtoken.grantRole(await acdmtoken.MINTER_ROLE(), platform.address)
