@@ -195,7 +195,7 @@ describe("ACDMPlatform", function () {
 
     expect(await acdmtoken.balanceOf(acc1.address)).to.equal(parseUnits("70000", 6))
 
-    eth1 = await ethers.provider.getBalance(acc1.address) 
+    eth1 = await ethers.provider.getBalance(acc1.address)
 
     tx = await platform.connect(acc2)["buy(uint256)"](parseUnits("20000", 6), { value: parseEther('1.0') })
     await tx.wait()
@@ -205,8 +205,8 @@ describe("ACDMPlatform", function () {
 
     expect(await acdmtoken.balanceOf(acc2.address)).to.equal(parseUnits("20000", 6))
 
-    eth1 = await ethers.provider.getBalance(acc1.address) 
-    eth2 = await ethers.provider.getBalance(acc2.address) 
+    eth1 = await ethers.provider.getBalance(acc1.address)
+    eth2 = await ethers.provider.getBalance(acc2.address)
 
     tx = await platform.connect(acc3)["buy(uint256)"](parseUnits("30000", 6), { value: parseEther('1.0') })
     await tx.wait()
@@ -228,8 +228,17 @@ describe("ACDMPlatform", function () {
   step('trade round 1', async function () {
     //console.log(await acdmtoken.balanceOf(platform.address))
 
+    let eth1;
+
+    let eth2;
+
+    let comm;
+
     let tx = await platform.checkRound()
     await tx.wait()
+
+    let acdmPrice = await platform.acdmPrice()
+
 
     tx = await platform.addOrder(parseUnits("10000", 6))
     await tx.wait()
@@ -242,13 +251,30 @@ describe("ACDMPlatform", function () {
 
     expect(await acdmtoken.balanceOf(platform.address)).to.equal(parseUnits("30000", 6))
 
+    tx = await platform.connect(acc3).addOrder(parseUnits("30000", 6))
+    await tx.wait()
+
     tx = await platform.connect(acc2)["redeemOrder(address,uint256)"](acc1.address, parseUnits("10000", 6), { value: parseEther('1.0') });
     await tx.wait()
+
+
 
     tx = await platform.connect(acc3)["redeemOrder(address,uint256)"](acc1.address, parseUnits("15000", 6), { value: parseEther('1.0') });
     await tx.wait()
 
     await expect(platform.connect(acc4)["redeemOrder(address,uint256)"](acc1.address, parseUnits("11000", 6), { value: parseEther('1.0') })).to.be.revertedWith("Not enough amount in orders")
+
+    eth1 = await ethers.provider.getBalance(acc1.address)
+    eth2 = await ethers.provider.getBalance(acc2.address)
+ 
+    tx = await platform.connect(acc2)["redeemOrder(address,uint256)"](acc3.address, parseUnits("10000", 6), { value: parseEther('0.1') });
+    const receipt = await tx.wait()
+
+    let purchase = acdmPrice.mul(parseUnits("10000", 6))
+
+    comm = acdmPrice.mul(parseUnits("10000", 6)).mul(25).div(1000);
+    expect(await ethers.provider.getBalance(acc1.address)).to.equal(eth1.add(comm))
+    expect(await ethers.provider.getBalance(acc2.address)).to.equal(eth2.sub(receipt.gasUsed).sub(purchase).add(comm))
 
     await network.provider.send("evm_increaseTime", [roundDuration])
   });

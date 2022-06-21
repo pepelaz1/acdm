@@ -189,9 +189,10 @@ contract ACDMPlatform {
         uint256 comission1 = (_amountEth * tradeComission1) / 1000;
         uint256 comission2 = (_amountEth * tradeComission2) / 1000;
         uint256 value = _amountEth - comission1 - comission2;
-        if (platformUser.referer1 != address(0)) {         
+
+        if (platformUser.referer1 != address(0)) {  
             payable(platformUser.referer1).transfer(comission1);     
-            if (platformUser.referer2 != address(0)) {            
+            if (platformUser.referer2 != address(0)) {           
                 payable(platformUser.referer2).transfer(comission2);
             } else {
                 payable(specialAddress).transfer(comission2);
