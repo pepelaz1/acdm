@@ -15,7 +15,14 @@ contract ACDMPlatform {
         uint256 startTime;
     }
 
+    struct PlatformUser {
+        bool isRegistered;
+        address[2] referers;
+    }
+
     Round private currentRound;
+
+    mapping(address => PlatformUser) private platformUsers;
 
     ACDMToken private acdmToken;
 
@@ -45,6 +52,25 @@ contract ACDMPlatform {
             type_: RoundType.SALE,
             startTime: block.timestamp
         });
+    }
+
+    function register() public {
+        platformUsers[msg.sender] = PlatformUser({
+            isRegistered: true,
+            referers: [address(0), address(0)]
+        });
+    }
+
+    function register(address _referer) public {
+        platformUsers[msg.sender] = PlatformUser({
+            isRegistered: true,
+            referers: [address(_referer), address(0)]
+        });
+
+        address ref = platformUsers[_referer].referers[0];
+        if (platformUsers[_referer].isRegistered && ref != address(0)) {
+             platformUsers[msg.sender].referers[1] = ref;
+        }
     }
 
     function buy() public payable onlyRound(RoundType.SALE) {
@@ -91,12 +117,12 @@ contract ACDMPlatform {
         public
         payable
         onlyRound(RoundType.TRADE)
-    {    
+    {
         uint256 eth = _amount * acdmPrice;
         require(msg.value >= eth, "Not enough ether sent");
         require(orders[_seller] >= _amount, "Not enough amount in orders");
         _seller.transfer(eth);
-         acdmToken.transfer(msg.sender, _amount);
+        acdmToken.transfer(msg.sender, _amount);
         orders[_seller] -= _amount;
         tradeAmount += eth;
         uint256 surplus = msg.value - eth;
