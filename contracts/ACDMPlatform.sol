@@ -123,7 +123,6 @@ contract ACDMPlatform {
         uint256 amount = msg.value / acdmPrice;
         require(orders[_seller] >= amount, "Not enough amount in orders");
         acdmToken.transfer(msg.sender, amount);
-        // _seller.transfer(msg.value);
         distributeTrade(_seller, msg.value);
         orders[_seller] -= amount;
         tradeAmount += msg.value;
@@ -139,7 +138,6 @@ contract ACDMPlatform {
         require(msg.value >= eth, "Not enough ether sent");
         require(orders[_seller] >= _amount, "Not enough amount in orders");
         acdmToken.transfer(msg.sender, _amount);
-        //_seller.transfer(eth);
         distributeTrade(_seller, eth);
         orders[_seller] -= _amount;
         tradeAmount += eth;
@@ -177,6 +175,7 @@ contract ACDMPlatform {
         uint256 comission = 0;
         if (platformUser.referer1 != address(0)) {
             comission = (_amountEth * saleComission1) / 1000;
+            //console.log("123  comission: %d, referer1: %d", comission, platformUser.referer1);
             payable(platformUser.referer1).transfer(comission);
             if (platformUser.referer2 != address(0)) {
                 comission = (_amountEth * saleComission2) / 1000;

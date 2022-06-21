@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { loadFixture } from "ethereum-waffle";
+import { BigNumber, utils } from "ethers";
 //import { BigNumber } from "ethers";
 import { ethers, network } from "hardhat";
 //const hardhat = require("hardhat");
@@ -107,9 +108,6 @@ describe("ACDMPlatform", function () {
     await acdmtoken.connect(acc2).approve(platform.address, MaxUint256);
     await acdmtoken.connect(acc3).approve(platform.address, MaxUint256);
     await acdmtoken.connect(acc4).approve(platform.address, MaxUint256);
-    // await acdmtoken.mint(platform.address, ethers.utils.parseUnits('100000', 6))
-
-    //console.log(await acdmtoken.balanceOf(platform.address))
   });
 
   step('add liquidity', async function () {
@@ -180,7 +178,15 @@ describe("ACDMPlatform", function () {
 
   step('sale round 1', async function () {
     // console.log("Sale round 1 acdm price:", (await acdmtoken.balanceOf(platform.address)).toString())
-    console.log("Sale round 1 acdm price:", (await platform.acdmPrice()).toString())
+    //console.log("Sale round 1 acdm price:", (await platform.acdmPrice()).toString())
+
+    let eth1;
+
+    let eth2;
+
+    let comm;
+
+    let acdmPrice = await platform.acdmPrice()
 
     await expect(platform["buy(uint256)"](parseUnits("50000", 6), { value: parseEther('0.4') })).to.be.revertedWith("Not enough ether sent")
 
@@ -189,13 +195,27 @@ describe("ACDMPlatform", function () {
 
     expect(await acdmtoken.balanceOf(acc1.address)).to.equal(parseUnits("70000", 6))
 
+    eth1 = await ethers.provider.getBalance(acc1.address) 
+
     tx = await platform.connect(acc2)["buy(uint256)"](parseUnits("20000", 6), { value: parseEther('1.0') })
     await tx.wait()
 
+    comm = acdmPrice.mul(parseUnits("20000", 6)).mul(5).div(100);
+    expect(await ethers.provider.getBalance(acc1.address)).to.equal(eth1.add(comm))
+
     expect(await acdmtoken.balanceOf(acc2.address)).to.equal(parseUnits("20000", 6))
+
+    eth1 = await ethers.provider.getBalance(acc1.address) 
+    eth2 = await ethers.provider.getBalance(acc2.address) 
 
     tx = await platform.connect(acc3)["buy(uint256)"](parseUnits("30000", 6), { value: parseEther('1.0') })
     await tx.wait()
+
+    comm = acdmPrice.mul(parseUnits("30000", 6)).mul(5).div(100);
+    expect(await ethers.provider.getBalance(acc2.address)).to.equal(eth2.add(comm))
+
+    comm = acdmPrice.mul(parseUnits("30000", 6)).mul(3).div(100);
+    expect(await ethers.provider.getBalance(acc1.address)).to.equal(eth1.add(comm))
 
     expect(await acdmtoken.balanceOf(acc3.address)).to.equal(parseUnits("30000", 6))
 
@@ -237,8 +257,8 @@ describe("ACDMPlatform", function () {
     let tx = await platform.checkRound()
     await tx.wait()
 
-    console.log("Sale round 2 acdm price:", (await platform.acdmPrice()).toString())
-    console.log("Sale round 2 acdm amount:", (await acdmtoken.balanceOf(platform.address)).toString())
+    //console.log("Sale round 2 acdm price:", (await platform.acdmPrice()).toString())
+    //console.log("Sale round 2 acdm amount:", (await acdmtoken.balanceOf(platform.address)).toString())
 
     tx = await platform.connect(acc4)["buy(uint256)"](parseUnits("5000", 6), { value: parseEther('1.0') })
     await tx.wait()
@@ -275,8 +295,8 @@ describe("ACDMPlatform", function () {
     let tx = await platform.checkRound()
     await tx.wait()
 
-    console.log("Sale round 3 acdm price:", (await platform.acdmPrice()).toString())
-    console.log("Sale round 3 acdm amount:", (await acdmtoken.balanceOf(platform.address)).toString())
+    //console.log("Sale round 3 acdm price:", (await platform.acdmPrice()).toString())
+    //console.log("Sale round 3 acdm amount:", (await acdmtoken.balanceOf(platform.address)).toString())
 
   });
 
