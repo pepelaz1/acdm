@@ -155,8 +155,25 @@ describe("ACDMPlatform", function () {
     await tx.wait()
   });
 
-  step('voting', async function () {
+  step('register', async function () {
+    let tx = await platform.connect(acc1)["register()"]()
+    await tx.wait()
 
+    expect((await platform.platformUsers(acc1.address)).isRegistered).to.equal(true)
+
+    tx = await platform.connect(acc2)["register(address)"](acc1.address)
+    await tx.wait()
+
+    expect((await platform.platformUsers(acc2.address)).referer1).to.equal(acc1.address)
+
+    tx = await platform.connect(acc3)["register(address)"](acc2.address)
+    await tx.wait()
+
+    expect((await platform.platformUsers(acc3.address)).referer1).to.equal(acc2.address)
+    expect((await platform.platformUsers(acc3.address)).referer2).to.equal(acc1.address)
+
+    tx = await platform.connect(acc4)["register(address)"](acc1.address)
+    await tx.wait()
   });
 
   step('sale round 1', async function () {

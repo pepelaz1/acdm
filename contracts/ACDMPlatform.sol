@@ -17,16 +17,17 @@ contract ACDMPlatform {
 
     struct PlatformUser {
         bool isRegistered;
-        address[2] referers;
+        address referer1;
+        address referer2;
     }
+
+    uint256 public acdmPrice = 1e7;
 
     Round private currentRound;
 
-    mapping(address => PlatformUser) private platformUsers;
+    mapping(address => PlatformUser) public platformUsers;
 
     ACDMToken private acdmToken;
-
-    uint256 public acdmPrice = 1e7;
 
     mapping(address => uint256) private orders;
 
@@ -57,19 +58,21 @@ contract ACDMPlatform {
     function register() public {
         platformUsers[msg.sender] = PlatformUser({
             isRegistered: true,
-            referers: [address(0), address(0)]
+            referer1: address(0),
+            referer2: address(0)
         });
     }
 
     function register(address _referer) public {
         platformUsers[msg.sender] = PlatformUser({
             isRegistered: true,
-            referers: [address(_referer), address(0)]
+            referer1: _referer,
+            referer2: address(0)
         });
 
-        address ref = platformUsers[_referer].referers[0];
+        address ref = platformUsers[_referer].referer1;
         if (platformUsers[_referer].isRegistered && ref != address(0)) {
-             platformUsers[msg.sender].referers[1] = ref;
+            platformUsers[msg.sender].referer2 = ref;
         }
     }
 
