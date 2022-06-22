@@ -89,7 +89,7 @@ describe("ACDMPlatform", function () {
 
   step('deploy dao', async function () {
     const Dao = await ethers.getContractFactory('Dao', acc1)
-    dao = await Dao.deploy(staking.address, lpToken.address, parseUnits('7', 15), 60 * 60 * 24 * 3)
+    dao = await Dao.deploy(staking.address, parseUnits('7', 15), 60 * 60 * 24 * 3)
     await dao.deployed()
 
     await dao.grantRole(await dao.CHAIRMAN_ROLE(), acc1.address)
@@ -362,7 +362,7 @@ describe("ACDMPlatform", function () {
     tx = await dao.finishProposal(0)
     await tx.wait()
 
-    expect(await staking.getUnstakeDelay()).to.equal(newDelay)
+    expect(await staking.unstakeDelay()).to.equal(newDelay)
 
   });
 

@@ -6,26 +6,24 @@ import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./XXXToken.sol";
+import "./IDaoWeights.sol";
 
-contract Staking {
+contract Staking is IDaoWeights {
+    uint256 public rewardPercent = 3;
+
+    uint256 public unstakeDelay = 3 days;
+
+    uint256 public rewardDelay = 7 days;
+
     address private immutable owner;
 
     ERC20 private immutable lpToken;
 
     XXXToken private immutable rewardToken;
 
-    uint256 private rewardPercent = 3;
-
     mapping(address => uint256) public balances;
 
-    // times when stacking begins
-    mapping(address => uint256) startTimes;
-
-    // unstake delay
-    uint256 private unstakeDelay = 3 days;
-
-    // reward delay
-    uint256 private rewardDelay = 7 days;
+    mapping(address => uint256) private startTimes;
 
     modifier onlyOwner() {
         require(
@@ -35,18 +33,14 @@ contract Staking {
         _;
     }
 
-    modifier timePassed(uint256 _duration) {
-        require(
-            block.timestamp > startTimes[msg.sender] + _duration,
-            "Time delay has not passed yet"
-        );
-        _;
-    }
-
     constructor(address _lpAddress, address _rewardAddress) {
         owner = msg.sender;
         lpToken = ERC20(_lpAddress);
         rewardToken = XXXToken(_rewardAddress);
+    }
+
+    function balanceOf(address _addr) public view returns(uint256) {
+        return balances[_addr];
     }
 
     function stake(uint256 _amount) public {
@@ -63,7 +57,11 @@ contract Staking {
         }
     }
 
-    function unstake() public timePassed(unstakeDelay) {
+    function unstake() public {
+        require(
+            block.timestamp > startTimes[msg.sender] + unstakeDelay,
+            "Time delay has not passed yet"
+        );
         if (block.timestamp > startTimes[msg.sender] + rewardDelay) {
             claim();
         }
@@ -76,29 +74,6 @@ contract Staking {
         uint256 totalReward = (balances[msg.sender] * rewardPercent * cnt) /
             100;
         rewardToken.mint(msg.sender, totalReward);
-        startTimes[msg.sender] = block.timestamp;
-    }
-
-    function configure(
-        uint256 _rewardPercent,
-        uint256 _rewardDelay,
-        uint256 _unstakeDelay
-    ) public onlyOwner {
-        rewardPercent = _rewardPercent;
-        rewardDelay = _rewardDelay;
-        unstakeDelay = _unstakeDelay;
-    }
-
-    function getRewardDelay() public view returns (uint256) {
-        return rewardDelay;
-    }
-
-    function getRewardPercent() public view returns (uint256) {
-        return rewardPercent;
-    }
-
-    function getUnstakeDelay() public view returns (uint256) {
-        return unstakeDelay;
     }
 
     function setUnstakeDelay(uint256 _unstakeDelay) public {

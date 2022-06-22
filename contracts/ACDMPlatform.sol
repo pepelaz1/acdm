@@ -35,13 +35,13 @@ contract ACDMPlatform {
 
     Round private currentRound;
 
-    mapping(address => PlatformUser) public platformUsers;
-
     ACDMToken private acdmToken;
 
-    mapping(address => uint256) private orders;
-
     uint256 private tradeAmount;
+
+    mapping(address => PlatformUser) public platformUsers;
+
+    mapping(address => uint256) private orders;
 
     modifier onlyRound(RoundType _type) {
         require(
@@ -175,7 +175,6 @@ contract ACDMPlatform {
         uint256 comission = 0;
         if (platformUser.referer1 != address(0)) {
             comission = (_amountEth * saleComission1) / 1000;
-            //console.log("123  comission: %d, referer1: %d", comission, platformUser.referer1);
             payable(platformUser.referer1).transfer(comission);
             if (platformUser.referer2 != address(0)) {
                 comission = (_amountEth * saleComission2) / 1000;
@@ -185,14 +184,14 @@ contract ACDMPlatform {
     }
 
     function distributeTrade(address _addr, uint256 _amountEth) private {
-        PlatformUser memory platformUser = platformUsers[_addr];   
+        PlatformUser memory platformUser = platformUsers[_addr];
         uint256 comission1 = (_amountEth * tradeComission1) / 1000;
         uint256 comission2 = (_amountEth * tradeComission2) / 1000;
         uint256 value = _amountEth - comission1 - comission2;
 
-        if (platformUser.referer1 != address(0)) {  
-            payable(platformUser.referer1).transfer(comission1);     
-            if (platformUser.referer2 != address(0)) {           
+        if (platformUser.referer1 != address(0)) {
+            payable(platformUser.referer1).transfer(comission1);
+            if (platformUser.referer2 != address(0)) {
                 payable(platformUser.referer2).transfer(comission2);
             } else {
                 payable(specialAddress).transfer(comission2);

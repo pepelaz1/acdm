@@ -3,15 +3,13 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "./XXXToken.sol";
-import "./Staking.sol";
+import "./IDaoWeights.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Dao is AccessControl {
+    IDaoWeights private weights;
+
     bytes32 public constant CHAIRMAN_ROLE = keccak256("CHAIRMAN_ROLE");
-
-    Staking private staking;
-
-    ERC20 private immutable lpToken;
 
     uint256 private immutable minQuorum;
 
@@ -37,13 +35,11 @@ contract Dao is AccessControl {
     event ProposalDataExecuted(uint256 indexed id);
 
     constructor(
-        address _staking,
-        address _token,
+        address _weights,
         uint256 _minQuorum,
         uint256 _duration
     ) {
-        staking = Staking(_staking);
-        lpToken = ERC20(_token);
+        weights = IDaoWeights(_weights);
         minQuorum = _minQuorum;
         duration = _duration;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -69,7 +65,7 @@ contract Dao is AccessControl {
 
     function vote(uint256 _id) public {
         require(voted[msg.sender][_id] == false, "already voted");
-        proposals[_id].amount += staking.balances(msg.sender);
+        proposals[_id].amount += weights.balancesOf(msg.sender);
         voted[msg.sender][_id] = true;
         if (_id > lastProposals[msg.sender]) {
             lastProposals[msg.sender] = _id;
