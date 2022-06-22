@@ -65,7 +65,7 @@ contract Dao is AccessControl {
 
     function vote(uint256 _id) public {
         require(voted[msg.sender][_id] == false, "already voted");
-        proposals[_id].amount += weights.balancesOf(msg.sender);
+        proposals[_id].amount += weights.balanceOf(msg.sender);
         voted[msg.sender][_id] = true;
         if (_id > lastProposals[msg.sender]) {
             lastProposals[msg.sender] = _id;

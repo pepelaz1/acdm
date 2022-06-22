@@ -220,7 +220,7 @@ describe("ACDMPlatform", function () {
     expect(await acdmtoken.balanceOf(acc3.address)).to.equal(parseUnits("30000", 6))
 
     // This finishes this round within
-    await expect(platform.connect(acc4)["buy(uint256)"](parseUnits("10000", 6), { value: parseEther('1.0') })).to.be.revertedWith("Only possible when it's SALE round")
+    await expect(platform.connect(acc4)["buy(uint256)"](parseUnits("10000", 6), { value: parseEther('1.0') })).to.be.revertedWith("InvalidRound(0, 1)")
 
     expect(await acdmtoken.balanceOf(platform.address)).to.equal(0)
   });

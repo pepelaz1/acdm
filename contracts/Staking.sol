@@ -39,7 +39,7 @@ contract Staking is IDaoWeights {
         rewardToken = XXXToken(_rewardAddress);
     }
 
-    function balanceOf(address _addr) public view returns(uint256) {
+    function balanceOf(address _addr) external view override returns(uint256) {
         return balances[_addr];
     }
 

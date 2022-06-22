@@ -21,6 +21,8 @@ contract ACDMPlatform {
         address referer2;
     }
 
+    error InvalidRound(RoundType required, RoundType current);
+
     uint256 public acdmPrice = 1e7;
 
     uint256 public saleComission1 = 50;
@@ -44,16 +46,9 @@ contract ACDMPlatform {
     mapping(address => uint256) private orders;
 
     modifier onlyRound(RoundType _type) {
-        require(
-            currentRound.type_ == _type,
-            string(
-                abi.encodePacked(
-                    "Only possible when it's ",
-                    _type == RoundType.SALE ? "SALE" : "ROUND",
-                    " round"
-                )
-            )
-        );
+        if (currentRound.type_ != _type) {
+            revert InvalidRound(_type, currentRound.type_);
+        }
         _;
     }
 
@@ -110,6 +105,7 @@ contract ACDMPlatform {
     }
 
     function removeOrder(uint256 _amount) public onlyRound(RoundType.TRADE) {
+        require(_amount <= orders[msg.sender], "Not enough amount");
         acdmToken.transfer(msg.sender, _amount);
         orders[msg.sender] -= _amount;
         checkRound();
@@ -142,7 +138,7 @@ contract ACDMPlatform {
         orders[_seller] -= _amount;
         tradeAmount += eth;
         uint256 surplus = msg.value - eth;
-        payable(msg.sender).transfer(surplus);
+        if (surplus > 0) payable(msg.sender).transfer(surplus);
         checkRound();
     }
 
@@ -172,33 +168,34 @@ contract ACDMPlatform {
 
     function distributeSale(address _addr, uint256 _amountEth) private {
         PlatformUser memory platformUser = platformUsers[_addr];
-        uint256 comission = 0;
+        uint256 commission = (_amountEth * (saleComission1 + saleComission2)) /
+            1000;
+
         if (platformUser.referer1 != address(0)) {
-            comission = (_amountEth * saleComission1) / 1000;
-            payable(platformUser.referer1).transfer(comission);
+            uint256 com1 = (_amountEth * saleComission1) / 1000;
+            payable(platformUser.referer1).transfer(com1);
+            commission -= com1;
             if (platformUser.referer2 != address(0)) {
-                comission = (_amountEth * saleComission2) / 1000;
-                payable(platformUser.referer2).transfer(comission);
+                payable(platformUser.referer2).transfer(commission);
             }
         }
+        if (commission > 0) payable(specialAddress).transfer(commission);
     }
 
     function distributeTrade(address _addr, uint256 _amountEth) private {
         PlatformUser memory platformUser = platformUsers[_addr];
-        uint256 comission1 = (_amountEth * tradeComission1) / 1000;
-        uint256 comission2 = (_amountEth * tradeComission2) / 1000;
-        uint256 value = _amountEth - comission1 - comission2;
+        uint256 commission = (_amountEth *
+            (tradeComission1 + tradeComission2)) / 1000;
 
         if (platformUser.referer1 != address(0)) {
-            payable(platformUser.referer1).transfer(comission1);
+            uint256 com1 = (_amountEth * tradeComission1) / 1000;
+            payable(platformUser.referer1).transfer(com1);
+            commission -= com1;
             if (platformUser.referer2 != address(0)) {
-                payable(platformUser.referer2).transfer(comission2);
-            } else {
-                payable(specialAddress).transfer(comission2);
+                payable(platformUser.referer2).transfer(commission);
             }
-        } else {
-            payable(specialAddress).transfer(comission1 + comission2);
         }
-        payable(_addr).transfer(value);
+        if (commission > 0) payable(specialAddress).transfer(commission);
+        payable(_addr).transfer(_amountEth - commission);
     }
 }
