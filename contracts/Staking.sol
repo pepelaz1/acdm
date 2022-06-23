@@ -7,11 +7,14 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./XXXToken.sol";
 import "./IDaoWeights.sol";
+import "./IVoting.sol";
 
 contract Staking is IDaoWeights {
+    IVoting public voting;
+
     uint256 public rewardPercent = 3;
 
-    uint256 public unstakeDelay = 3 days;
+    uint256 public unstakeDelay = 1 days;
 
     uint256 public rewardDelay = 7 days;
 
@@ -39,7 +42,11 @@ contract Staking is IDaoWeights {
         rewardToken = XXXToken(_rewardAddress);
     }
 
-    function balanceOf(address _addr) external view override returns(uint256) {
+    function setVoting(address _voting) public {
+        voting = IVoting(_voting);
+    }
+
+    function balanceOf(address _addr) external view override returns (uint256) {
         return balances[_addr];
     }
 
@@ -62,6 +69,7 @@ contract Staking is IDaoWeights {
             block.timestamp > startTimes[msg.sender] + unstakeDelay,
             "Time delay has not passed yet"
         );
+        require(!voting.inProgress(msg.sender), "voting is in progress");
         if (block.timestamp > startTimes[msg.sender] + rewardDelay) {
             claim();
         }
@@ -74,6 +82,7 @@ contract Staking is IDaoWeights {
         uint256 totalReward = (balances[msg.sender] * rewardPercent * cnt) /
             100;
         rewardToken.mint(msg.sender, totalReward);
+        startTimes[msg.sender] += cnt * rewardDelay;
     }
 
     function setUnstakeDelay(uint256 _unstakeDelay) public {

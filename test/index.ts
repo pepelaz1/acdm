@@ -93,6 +93,8 @@ describe("ACDMPlatform", function () {
     await dao.deployed()
 
     await dao.grantRole(await dao.CHAIRMAN_ROLE(), acc1.address)
+
+    await staking.setVoting(dao.address);
   });
 
   step('deploy platform', async function () {
@@ -160,6 +162,8 @@ describe("ACDMPlatform", function () {
     await tx.wait()
 
     expect((await platform.platformUsers(acc1.address)).isRegistered).to.equal(true)
+
+    await expect(platform.connect(acc1)["register()"]()).to.be.revertedWith("User already registered")
 
     tx = await platform.connect(acc2)["register(address)"](acc1.address)
     await tx.wait()
@@ -348,13 +352,22 @@ describe("ACDMPlatform", function () {
     let tx = await dao.addProposal(staking.address, calldata, 'increase staking period')
     await tx.wait()
 
-    tx = await dao.connect(acc1).vote(0)
+    tx = await dao.connect(acc1).vote(0, true)
     await tx.wait()
 
-    tx = await dao.connect(acc2).vote(0)
+    let day = 1 * 24 * 60 * 60
+
+    await network.provider.send("evm_increaseTime", [day])
+
+    await expect(staking.connect(acc1).unstake()).to.be.revertedWith("voting is in progress")
+
+    tx = await dao.connect(acc2).vote(0, true)
     await tx.wait()
 
-    tx = await dao.connect(acc4).vote(0)
+    tx = await dao.connect(acc3).vote(0, false)
+    await tx.wait()
+
+    tx = await dao.connect(acc4).vote(0, true)
     await tx.wait()
 
     await network.provider.send("evm_increaseTime", [daoDuration])

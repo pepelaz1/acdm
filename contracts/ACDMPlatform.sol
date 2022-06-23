@@ -52,6 +52,11 @@ contract ACDMPlatform {
         _;
     }
 
+    modifier onlyUnregistered(address _addr) {
+        require(!platformUsers[_addr].isRegistered, "User already registered");
+        _;
+    }
+
     constructor(address _acdmAddress, address _specialAddress) {
         acdmToken = ACDMToken(_acdmAddress);
         specialAddress = _specialAddress;
@@ -61,7 +66,7 @@ contract ACDMPlatform {
         });
     }
 
-    function register() public {
+    function register() public onlyUnregistered(msg.sender) {
         platformUsers[msg.sender] = PlatformUser({
             isRegistered: true,
             referer1: address(0),
@@ -69,7 +74,7 @@ contract ACDMPlatform {
         });
     }
 
-    function register(address _referer) public {
+    function register(address _referer) public onlyUnregistered(msg.sender) {
         platformUsers[msg.sender] = PlatformUser({
             isRegistered: true,
             referer1: _referer,
@@ -83,12 +88,14 @@ contract ACDMPlatform {
     }
 
     function buy() public payable onlyRound(RoundType.SALE) {
+        checkRegistration(msg.sender);
         acdmToken.transfer(msg.sender, msg.value / acdmPrice);
         distributeSale(msg.sender, msg.value);
         checkRound();
     }
 
     function buy(uint256 _amount) public payable onlyRound(RoundType.SALE) {
+        checkRegistration(msg.sender);
         uint256 eth = _amount * acdmPrice;
         require(msg.value >= eth, "Not enough ether sent");
         acdmToken.transfer(msg.sender, _amount);
@@ -197,5 +204,11 @@ contract ACDMPlatform {
         }
         if (commission > 0) payable(specialAddress).transfer(commission);
         payable(_addr).transfer(_amountEth - commission);
+    }
+
+    function checkRegistration(address _addr) private {
+        if (!platformUsers[_addr].isRegistered) {
+            register();
+        }
     }
 }

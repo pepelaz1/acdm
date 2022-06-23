@@ -4,9 +4,10 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "./XXXToken.sol";
 import "./IDaoWeights.sol";
+import "./IVoting.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract Dao is AccessControl {
+contract Dao is AccessControl, IVoting {
     IDaoWeights private weights;
 
     bytes32 public constant CHAIRMAN_ROLE = keccak256("CHAIRMAN_ROLE");
@@ -63,13 +64,20 @@ contract Dao is AccessControl {
         emit ProposalAdded(proposals.length - 1);
     }
 
-    function vote(uint256 _id) public {
+    function vote(uint256 _id, bool _isPositive) public {
         require(voted[msg.sender][_id] == false, "already voted");
-        proposals[_id].amount += weights.balanceOf(msg.sender);
+        if (_isPositive) {
+            proposals[_id].amount += weights.balanceOf(msg.sender);
+        }
         voted[msg.sender][_id] = true;
         if (_id > lastProposals[msg.sender]) {
             lastProposals[msg.sender] = _id;
         }
+    }
+
+    function inProgress(address _addr) external view override returns (bool) {
+        return
+            block.timestamp <= proposals[lastProposals[_addr]].start + duration;
     }
 
     function finishProposal(uint256 _id) public {
