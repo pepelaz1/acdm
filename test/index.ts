@@ -393,7 +393,6 @@ describe("ACDMPlatform", function () {
 
   });
 
-
   step('withdraw staking rewards', async function () {
     let tx = await staking.connect(acc1).claim();
     await tx.wait()
@@ -406,6 +405,47 @@ describe("ACDMPlatform", function () {
 
     tx = await staking.connect(acc4).claim();
     await tx.wait()
+  });
+
+  step('voting to choose what to do with comission', async function () {
+    var abi = [{
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "_isBurnCommission",
+          "type": "bool"
+        }
+      ],
+      "name": "setBurnCommission",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+    ];
+
+    const calldata = new ethers.utils.Interface(abi).encodeFunctionData('setBurnCommission', [true]);
+
+    let tx = await dao.addProposal(platform.address, calldata, 'burn commission or send to owner?')
+    await tx.wait()
+
+    tx = await dao.connect(acc1).vote(1, true)
+    await tx.wait()
+
+    tx = await dao.connect(acc2).vote(1, true)
+    await tx.wait()
+
+    tx = await dao.connect(acc3).vote(1, true)
+    await tx.wait()
+
+    tx = await dao.connect(acc4).vote(1, true)
+    await tx.wait()
+
+    await network.provider.send("evm_increaseTime", [daoDuration])
+
+    tx = await dao.finishProposal(1)
+    await tx.wait()
+
+    expect(await platform.isBurnCommission()).to.equal(true)
   });
 
 });

@@ -35,11 +35,15 @@ contract ACDMPlatform {
 
     address public specialAddress;
 
+    bool public isBurnCommission = false;
+
     Round private currentRound;
 
     ACDMToken private acdmToken;
 
     uint256 private tradeAmount;
+
+    address private immutable owner;
 
     mapping(address => PlatformUser) public platformUsers;
 
@@ -58,6 +62,7 @@ contract ACDMPlatform {
     }
 
     constructor(address _acdmAddress, address _specialAddress) {
+        owner = msg.sender;
         acdmToken = ACDMToken(_acdmAddress);
         specialAddress = _specialAddress;
         currentRound = Round({
@@ -163,11 +168,15 @@ contract ACDMPlatform {
         }
     }
 
+    function setBurnCommission(bool _isBurnCommission) external {
+        isBurnCommission = _isBurnCommission;
+    }
+
     function finishRound() private {
         if (currentRound.type_ == RoundType.SALE) {
             acdmToken.burn(acdmToken.balanceOf(address(this)));
             currentRound.type_ = RoundType.TRADE;
-         } else {
+        } else {
             currentRound.type_ = RoundType.SALE;
             acdmPrice = (acdmPrice * 103) / 100 + 4e6;
             uint256 mintAmount = tradeAmount / acdmPrice;
