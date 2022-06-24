@@ -41,6 +41,8 @@ describe("ACDMPlatform", function () {
 
   let platform: any;
 
+  let distributor: any;
+
   step('deploy tokens', async function () {
     [acc1, acc2, acc3, acc4, acc5, acc6] = await ethers.getSigners()
 
@@ -100,9 +102,14 @@ describe("ACDMPlatform", function () {
   });
 
   step('deploy platform', async function () {
+
+    const Distributor = await ethers.getContractFactory('ACDMDistributor', acc1)
+    distributor = await Distributor.deploy(router.address)
+    await distributor.deployed()
+
     const Platform = await ethers.getContractFactory('ACDMPlatform', acc1)
-    platform = await Platform.deploy(acdmtoken.address, acc5.address)
-    await dao.deployed()
+    platform = await Platform.deploy(acdmtoken.address, distributor.address)
+    await platform.deployed()
 
     await acdmtoken.grantRole(await acdmtoken.MINTER_ROLE(), platform.address)
     let tx = await acdmtoken.mint(platform.address, parseUnits('100000', 6));
@@ -160,24 +167,24 @@ describe("ACDMPlatform", function () {
   });
 
   step('register', async function () {
-    let tx = await platform.connect(acc1)["register()"]()
+    let tx = await distributor.connect(acc1)["register()"]()
     await tx.wait()
 
-    expect((await platform.platformUsers(acc1.address)).isRegistered).to.equal(true)
+    expect((await distributor.platformUsers(acc1.address)).isRegistered).to.equal(true)
 
-    await expect(platform.connect(acc1)["register()"]()).to.be.revertedWith("User already registered")
+    await expect(distributor.connect(acc1)["register()"]()).to.be.revertedWith("User already registered")
 
-    tx = await platform.connect(acc2)["register(address)"](acc1.address)
+    tx = await distributor.connect(acc2)["register(address)"](acc1.address)
     await tx.wait()
 
-    expect((await platform.platformUsers(acc2.address)).referer).to.equal(acc1.address)
+    expect((await distributor.platformUsers(acc2.address)).referer).to.equal(acc1.address)
 
-    tx = await platform.connect(acc3)["register(address)"](acc2.address)
+    tx = await distributor.connect(acc3)["register(address)"](acc2.address)
     await tx.wait()
 
-    expect((await platform.platformUsers(acc3.address)).referer).to.equal(acc2.address)
+    expect((await distributor.platformUsers(acc3.address)).referer).to.equal(acc2.address)
 
-    tx = await platform.connect(acc4)["register(address)"](acc1.address)
+    tx = await distributor.connect(acc4)["register(address)"](acc1.address)
     await tx.wait()
   });
 
@@ -424,7 +431,7 @@ describe("ACDMPlatform", function () {
 
     const calldata = new ethers.utils.Interface(abi).encodeFunctionData('setBurnCommission', [true]);
 
-    let tx = await dao.addProposal(platform.address, calldata, 'burn commission or send to owner?')
+    let tx = await dao.addProposal(distributor.address, calldata, 'burn commission or send to owner?')
     await tx.wait()
 
     tx = await dao.connect(acc1).vote(1, true)
@@ -444,7 +451,7 @@ describe("ACDMPlatform", function () {
     tx = await dao.finishProposal(1)
     await tx.wait()
 
-    expect(await platform.isBurnCommission()).to.equal(true)
+    expect(await distributor.isBurnCommission()).to.equal(true)
   });
 
 });

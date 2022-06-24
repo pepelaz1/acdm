@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./ACDMToken.sol";
+import "./ACDMDistributor.sol";
 
 contract ACDMPlatform {
     enum RoundType {
@@ -14,36 +15,17 @@ contract ACDMPlatform {
         uint256 startTime;
     }
 
-    struct PlatformUser {
-        bool isRegistered;
-        address referer;
-    }
-
     error InvalidRound(RoundType required, RoundType current);
 
     uint256 public acdmPrice = 1e7;
 
-    uint256 public saleComission1 = 50;
-
-    uint256 public saleComission2 = 30;
-
-    uint256 public tradeComission1 = 25;
-
-    uint256 public tradeComission2 = 25;
-
-    address public specialAddress;
-
-    bool public isBurnCommission = false;
+    ACDMDistributor public distributor;
 
     Round private currentRound;
 
     ACDMToken private acdmToken;
 
     uint256 private tradeAmount;
-
-    address private immutable owner;
-
-    mapping(address => PlatformUser) public platformUsers;
 
     mapping(address => uint256) private orders;
 
@@ -54,62 +36,45 @@ contract ACDMPlatform {
         _;
     }
 
-    modifier onlyUnregistered(address _addr) {
-        require(!platformUsers[_addr].isRegistered, "User already registered");
-        _;
-    }
-
-    constructor(address _acdmAddress, address _specialAddress) {
-        owner = msg.sender;
+    constructor(address _acdmAddress, address _distributor) {
         acdmToken = ACDMToken(_acdmAddress);
-        specialAddress = _specialAddress;
+        distributor = ACDMDistributor(_distributor);
         currentRound = Round({
             type_: RoundType.SALE,
             startTime: block.timestamp
         });
     }
 
-    function register() public onlyUnregistered(msg.sender) {
-        platformUsers[msg.sender] = PlatformUser({
-            isRegistered: true,
-            referer: address(0)
-        });
-    }
-
-    function register(address _referer) public onlyUnregistered(msg.sender) {
-        platformUsers[msg.sender] = PlatformUser({
-            isRegistered: true,
-            referer: _referer
-        });
-    }
-
     function buy() public payable onlyRound(RoundType.SALE) {
-        checkRegistration(msg.sender);
-        acdmToken.transfer(msg.sender, msg.value / acdmPrice);
-        distributeSale(msg.sender, msg.value);
+        distributor.checkRegistration(msg.sender);
+        acdmToken.transfer(msg.sender, msg.value / acdmPrice);ÍÍ
+        distributor.distribute{value: msg.value}(
+            currentRound.type_,
+            msg.sender
+        );
         checkRound();
     }
 
     function buy(uint256 _amount) public payable onlyRound(RoundType.SALE) {
-        checkRegistration(msg.sender);
+        distributor.checkRegistration(msg.sender);
         uint256 eth = _amount * acdmPrice;
         require(msg.value >= eth, "Not enough ether sent");
         acdmToken.transfer(msg.sender, _amount);
-        distributeSale(msg.sender, eth);
+        distributor.distribute{value: eth}(currentRound.type_, msg.sender);
         uint256 surplus = msg.value - eth;
         payable(msg.sender).transfer(surplus);
         checkRound();
     }
 
     function addOrder(uint256 _amount) public onlyRound(RoundType.TRADE) {
-        checkRegistration(msg.sender);
+        distributor.checkRegistration(msg.sender);
         acdmToken.transferFrom(msg.sender, address(this), _amount);
         orders[msg.sender] += _amount;
         checkRound();
     }
 
     function removeOrder(uint256 _amount) public onlyRound(RoundType.TRADE) {
-        checkRegistration(msg.sender);
+        distributor.checkRegistration(msg.sender);
         require(_amount <= orders[msg.sender], "Not enough amount");
         acdmToken.transfer(msg.sender, _amount);
         orders[msg.sender] -= _amount;
@@ -121,11 +86,11 @@ contract ACDMPlatform {
         payable
         onlyRound(RoundType.TRADE)
     {
-        checkRegistration(msg.sender);
+        distributor.checkRegistration(msg.sender);
         uint256 amount = msg.value / acdmPrice;
         require(orders[_seller] >= amount, "Not enough amount in orders");
         acdmToken.transfer(msg.sender, amount);
-        distributeTrade(_seller, msg.value);
+        distributor.distribute{value: msg.value}(currentRound.type_, _seller);
         orders[_seller] -= amount;
         tradeAmount += msg.value;
         checkRound();
@@ -136,12 +101,12 @@ contract ACDMPlatform {
         payable
         onlyRound(RoundType.TRADE)
     {
-        checkRegistration(msg.sender);
+        distributor.checkRegistration(msg.sender);
         uint256 eth = _amount * acdmPrice;
         require(msg.value >= eth, "Not enough ether sent");
         require(orders[_seller] >= _amount, "Not enough amount in orders");
         acdmToken.transfer(msg.sender, _amount);
-        distributeTrade(_seller, eth);
+        distributor.distribute{value: eth}(currentRound.type_, _seller);
         orders[_seller] -= _amount;
         tradeAmount += eth;
         uint256 surplus = msg.value - eth;
@@ -159,11 +124,6 @@ contract ACDMPlatform {
         }
     }
 
-    function setBurnCommission(bool _isBurnCommission) external {
-        isBurnCommission = _isBurnCommission;
-    }
-
-
     function finishRound() private {
         if (currentRound.type_ == RoundType.SALE) {
             acdmToken.burn(acdmToken.balanceOf(address(this)));
@@ -176,48 +136,5 @@ contract ACDMPlatform {
             tradeAmount = 0;
         }
         currentRound.startTime = block.timestamp;
-    }
-
-    function distributeSale(address _addr, uint256 _amountEth) private {
-        PlatformUser memory platformUser = platformUsers[_addr];
-        uint256 commission = (_amountEth * (saleComission1 + saleComission2)) /
-            1000;
-
-        if (platformUser.referer != address(0)) {
-            uint256 com1 = (_amountEth * saleComission1) / 1000;
-            payable(platformUser.referer).transfer(com1);
-            commission -= com1;
-            platformUser = platformUsers[platformUser.referer];
-            if (platformUser.referer != address(0)) {
-                payable(platformUser.referer).transfer(commission);
-                commission = 0;
-            }
-        }
-        if (commission > 0) payable(specialAddress).transfer(commission);
-    }
-
-    function distributeTrade(address _addr, uint256 _amountEth) private {
-        PlatformUser memory platformUser = platformUsers[_addr];
-        uint256 commission = (_amountEth *
-            (tradeComission1 + tradeComission2)) / 1000;
-
-        if (platformUser.referer != address(0)) {
-            uint256 com1 = (_amountEth * tradeComission1) / 1000;
-            payable(platformUser.referer).transfer(com1);
-            commission -= com1;
-            platformUser = platformUsers[platformUser.referer];
-            if (platformUser.referer != address(0)) {
-                payable(platformUser.referer).transfer(commission);
-                commission = 0;
-            }
-        }
-        if (commission > 0) payable(specialAddress).transfer(commission);
-        payable(_addr).transfer(_amountEth - commission);
-    }
-
-    function checkRegistration(address _addr) private {
-        if (!platformUsers[_addr].isRegistered) {
-            register();
-        }
     }
 }
