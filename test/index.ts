@@ -170,13 +170,12 @@ describe("ACDMPlatform", function () {
     tx = await platform.connect(acc2)["register(address)"](acc1.address)
     await tx.wait()
 
-    expect((await platform.platformUsers(acc2.address)).referer1).to.equal(acc1.address)
+    expect((await platform.platformUsers(acc2.address)).referer).to.equal(acc1.address)
 
     tx = await platform.connect(acc3)["register(address)"](acc2.address)
     await tx.wait()
 
-    expect((await platform.platformUsers(acc3.address)).referer1).to.equal(acc2.address)
-    expect((await platform.platformUsers(acc3.address)).referer2).to.equal(acc1.address)
+    expect((await platform.platformUsers(acc3.address)).referer).to.equal(acc2.address)
 
     tx = await platform.connect(acc4)["register(address)"](acc1.address)
     await tx.wait()

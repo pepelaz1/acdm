@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
 import "./ACDMToken.sol";
 
 contract ACDMPlatform {
@@ -17,8 +16,7 @@ contract ACDMPlatform {
 
     struct PlatformUser {
         bool isRegistered;
-        address referer1;
-        address referer2;
+        address referer;
     }
 
     error InvalidRound(RoundType required, RoundType current);
@@ -74,22 +72,15 @@ contract ACDMPlatform {
     function register() public onlyUnregistered(msg.sender) {
         platformUsers[msg.sender] = PlatformUser({
             isRegistered: true,
-            referer1: address(0),
-            referer2: address(0)
+            referer: address(0)
         });
     }
 
     function register(address _referer) public onlyUnregistered(msg.sender) {
         platformUsers[msg.sender] = PlatformUser({
             isRegistered: true,
-            referer1: _referer,
-            referer2: address(0)
+            referer: _referer
         });
-
-        address ref = platformUsers[_referer].referer1;
-        if (platformUsers[_referer].isRegistered && ref != address(0)) {
-            platformUsers[msg.sender].referer2 = ref;
-        }
     }
 
     function buy() public payable onlyRound(RoundType.SALE) {
@@ -172,6 +163,7 @@ contract ACDMPlatform {
         isBurnCommission = _isBurnCommission;
     }
 
+
     function finishRound() private {
         if (currentRound.type_ == RoundType.SALE) {
             acdmToken.burn(acdmToken.balanceOf(address(this)));
@@ -191,12 +183,13 @@ contract ACDMPlatform {
         uint256 commission = (_amountEth * (saleComission1 + saleComission2)) /
             1000;
 
-        if (platformUser.referer1 != address(0)) {
+        if (platformUser.referer != address(0)) {
             uint256 com1 = (_amountEth * saleComission1) / 1000;
-            payable(platformUser.referer1).transfer(com1);
+            payable(platformUser.referer).transfer(com1);
             commission -= com1;
-            if (platformUser.referer2 != address(0)) {
-                payable(platformUser.referer2).transfer(commission);
+            platformUser = platformUsers[platformUser.referer];
+            if (platformUser.referer != address(0)) {
+                payable(platformUser.referer).transfer(commission);
                 commission = 0;
             }
         }
@@ -208,12 +201,13 @@ contract ACDMPlatform {
         uint256 commission = (_amountEth *
             (tradeComission1 + tradeComission2)) / 1000;
 
-        if (platformUser.referer1 != address(0)) {
+        if (platformUser.referer != address(0)) {
             uint256 com1 = (_amountEth * tradeComission1) / 1000;
-            payable(platformUser.referer1).transfer(com1);
+            payable(platformUser.referer).transfer(com1);
             commission -= com1;
-            if (platformUser.referer2 != address(0)) {
-                payable(platformUser.referer2).transfer(commission);
+            platformUser = platformUsers[platformUser.referer];
+            if (platformUser.referer != address(0)) {
+                payable(platformUser.referer).transfer(commission);
                 commission = 0;
             }
         }
