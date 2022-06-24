@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "./ACDMPlatform.sol";
+import "./XXXToken.sol";
+import "hardhat/console.sol";
 
 contract ACDMDistributor {
-    IUniswapV2Router02 private router;
-
     uint256 public saleComission1 = 50;
 
     uint256 public saleComission2 = 30;
@@ -16,6 +16,12 @@ contract ACDMDistributor {
     uint256 public tradeComission2 = 25;
 
     bool public isBurnCommission = false;
+
+    IUniswapV2Router02 private router;
+
+    address private immutable owner;
+
+    address private immutable token;
 
     struct PlatformUser {
         bool isRegistered;
@@ -29,8 +35,10 @@ contract ACDMDistributor {
         _;
     }
 
-    constructor(address _router) {
+    constructor(address _router, address _token) {
+        owner = msg.sender;
         router = IUniswapV2Router02(_router);
+        token = _token;
     }
 
     function distribute(ACDMPlatform.RoundType type_, address _seller)
@@ -78,6 +86,26 @@ contract ACDMDistributor {
 
     function setBurnCommission(bool _isBurnCommission) external {
         isBurnCommission = _isBurnCommission;
+    }
+
+    function manageComission() public {
+        if (isBurnCommission) {
+            address[] memory path = new address[](2);
+            path[0] = router.WETH();
+            path[1] = token;
+
+            router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: address(this).balance}(
+                1,
+                path,
+                address(this),
+                block.timestamp 
+            );
+
+            uint256 amount = ERC20(token).balanceOf(address(this));
+            XXXToken(token).burn(amount);
+        } else {
+            payable(owner).transfer(address(this).balance);
+        }
     }
 
     function _distribute(

@@ -104,9 +104,11 @@ describe("ACDMPlatform", function () {
   step('deploy platform', async function () {
 
     const Distributor = await ethers.getContractFactory('ACDMDistributor', acc1)
-    distributor = await Distributor.deploy(router.address)
+    distributor = await Distributor.deploy(router.address, xxxtoken.address)
     await distributor.deployed()
 
+    await xxxtoken.grantRole(await xxxtoken.BURNER_ROLE(), distributor.address)
+    
     const Platform = await ethers.getContractFactory('ACDMPlatform', acc1)
     platform = await Platform.deploy(acdmtoken.address, distributor.address)
     await platform.deployed()
@@ -452,6 +454,12 @@ describe("ACDMPlatform", function () {
     await tx.wait()
 
     expect(await distributor.isBurnCommission()).to.equal(true)
+
+    tx = await distributor.manageComission()
+    await tx.wait()
+
+    expect(await xxxtoken.balanceOf(distributor.address)).to.equal(0)
+
   });
 
 });
