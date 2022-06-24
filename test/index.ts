@@ -23,6 +23,8 @@ describe("ACDMPlatform", function () {
 
   let acc5: any;
 
+  let acc6: any;
+
   let xxxtoken: any;
 
   let acdmtoken: any;
@@ -40,7 +42,7 @@ describe("ACDMPlatform", function () {
   let platform: any;
 
   step('deploy tokens', async function () {
-    [acc1, acc2, acc3, acc4, acc5] = await ethers.getSigners()
+    [acc1, acc2, acc3, acc4, acc5, acc6] = await ethers.getSigners()
 
     //deploy XXX token
     const Erc20Token = await ethers.getContractFactory('XXXToken', acc1)
@@ -194,7 +196,8 @@ describe("ACDMPlatform", function () {
 
     await expect(platform["buy(uint256)"](parseUnits("50000", 6), { value: parseEther('0.4') })).to.be.revertedWith("Not enough ether sent")
 
-    let tx = await platform["buy(uint256)"](parseUnits("50000", 6), { value: parseEther('1.0') })
+
+    let tx = await platform["buy()"]({ value: parseEther('0.5') })
     await tx.wait()
 
     expect(await acdmtoken.balanceOf(acc1.address)).to.equal(parseUnits("70000", 6))
@@ -203,6 +206,7 @@ describe("ACDMPlatform", function () {
 
     tx = await platform.connect(acc2)["buy(uint256)"](parseUnits("20000", 6), { value: parseEther('1.0') })
     await tx.wait()
+
 
     comm = acdmPrice.mul(parseUnits("20000", 6)).mul(5).div(100);
     expect(await ethers.provider.getBalance(acc1.address)).to.equal(eth1.add(comm))
@@ -247,6 +251,8 @@ describe("ACDMPlatform", function () {
     tx = await platform.addOrder(parseUnits("10000", 6))
     await tx.wait()
 
+    await expect(platform.removeOrder(parseUnits("100000", 6))).to.be.revertedWith("Not enough amount")
+
     tx = await platform.removeOrder(parseUnits("10000", 6))
     await tx.wait()
 
@@ -269,7 +275,7 @@ describe("ACDMPlatform", function () {
 
     eth1 = await ethers.provider.getBalance(acc1.address)
     eth2 = await ethers.provider.getBalance(acc2.address)
- 
+
     tx = await platform.connect(acc2)["redeemOrder(address,uint256)"](acc3.address, parseUnits("10000", 6), { value: parseEther('0.1') });
     const receipt = await tx.wait()
 
@@ -298,6 +304,9 @@ describe("ACDMPlatform", function () {
     tx = await platform.connect(acc3)["buy(uint256)"](parseUnits("3000", 6), { value: parseEther('1.0') })
     await tx.wait()
 
+    tx = await platform.connect(acc6)["buy(uint256)"](parseUnits("100", 6), { value: parseEther('1.0') })
+    await tx.wait()
+
     await network.provider.send("evm_increaseTime", [roundDuration])
   });
 
@@ -311,8 +320,13 @@ describe("ACDMPlatform", function () {
     tx = await platform.connect(acc4).addOrder(parseUnits("5000", 6))
     await tx.wait()
 
-    tx = await platform.connect(acc1)["redeemOrder(address,uint256)"](acc2.address, parseUnits("5000", 6), { value: parseEther('1.0') });
+
+    tx = await platform.connect(acc1)["redeemOrder(address)"](acc2.address, { value: parseEther('0.05') });
     await tx.wait()
+
+    await expect(platform.connect(acc1)["redeemOrder(address)"](acc2.address, { value: parseEther('5.0') })).to.be.revertedWith("Not enough amount in orders")
+
+    await expect(platform.connect(acc1)["redeemOrder(address,uint256)"](acc2.address, parseUnits("100000", 6), { value: parseEther('1.0') })).to.be.revertedWith("Not enough ether sent")
 
     tx = await platform.connect(acc3)["redeemOrder(address,uint256)"](acc4.address, parseUnits("2000", 6), { value: parseEther('1.0') });
     await tx.wait()

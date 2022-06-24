@@ -106,12 +106,14 @@ contract ACDMPlatform {
     }
 
     function addOrder(uint256 _amount) public onlyRound(RoundType.TRADE) {
+        checkRegistration(msg.sender);
         acdmToken.transferFrom(msg.sender, address(this), _amount);
         orders[msg.sender] += _amount;
         checkRound();
     }
 
     function removeOrder(uint256 _amount) public onlyRound(RoundType.TRADE) {
+        checkRegistration(msg.sender);
         require(_amount <= orders[msg.sender], "Not enough amount");
         acdmToken.transfer(msg.sender, _amount);
         orders[msg.sender] -= _amount;
@@ -123,6 +125,7 @@ contract ACDMPlatform {
         payable
         onlyRound(RoundType.TRADE)
     {
+        checkRegistration(msg.sender);
         uint256 amount = msg.value / acdmPrice;
         require(orders[_seller] >= amount, "Not enough amount in orders");
         acdmToken.transfer(msg.sender, amount);
@@ -137,6 +140,7 @@ contract ACDMPlatform {
         payable
         onlyRound(RoundType.TRADE)
     {
+        checkRegistration(msg.sender);
         uint256 eth = _amount * acdmPrice;
         require(msg.value >= eth, "Not enough ether sent");
         require(orders[_seller] >= _amount, "Not enough amount in orders");
@@ -163,7 +167,7 @@ contract ACDMPlatform {
         if (currentRound.type_ == RoundType.SALE) {
             acdmToken.burn(acdmToken.balanceOf(address(this)));
             currentRound.type_ = RoundType.TRADE;
-        } else if (currentRound.type_ == RoundType.TRADE) {
+         } else {
             currentRound.type_ = RoundType.SALE;
             acdmPrice = (acdmPrice * 103) / 100 + 4e6;
             uint256 mintAmount = tradeAmount / acdmPrice;
@@ -184,6 +188,7 @@ contract ACDMPlatform {
             commission -= com1;
             if (platformUser.referer2 != address(0)) {
                 payable(platformUser.referer2).transfer(commission);
+                commission = 0;
             }
         }
         if (commission > 0) payable(specialAddress).transfer(commission);
@@ -200,6 +205,7 @@ contract ACDMPlatform {
             commission -= com1;
             if (platformUser.referer2 != address(0)) {
                 payable(platformUser.referer2).transfer(commission);
+                commission = 0;
             }
         }
         if (commission > 0) payable(specialAddress).transfer(commission);

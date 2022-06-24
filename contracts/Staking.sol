@@ -12,11 +12,11 @@ import "./IVoting.sol";
 contract Staking is IDaoWeights {
     IVoting public voting;
 
-    uint256 public rewardPercent = 3;
-
     uint256 public unstakeDelay = 1 days;
 
-    uint256 public rewardDelay = 7 days;
+    uint256 public immutable rewardPercent = 3;
+
+    uint256 public immutable rewardDelay = 7 days;
 
     address private immutable owner;
 
