@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "./ACDMPlatform.sol";
 import "./XXXToken.sol";
-import "hardhat/console.sol";
 
 contract ACDMDistributor {
     uint256 public saleComission1 = 50;
@@ -85,26 +84,25 @@ contract ACDMDistributor {
     }
 
     function setBurnCommission(bool _isBurnCommission) external {
+        manageComission();
         isBurnCommission = _isBurnCommission;
     }
 
     function manageComission() public {
-        if (isBurnCommission) {
+        if (isBurnCommission && address(this).balance > 0) {
             address[] memory path = new address[](2);
             path[0] = router.WETH();
             path[1] = token;
 
-            router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: address(this).balance}(
-                1,
-                path,
-                address(this),
-                block.timestamp 
-            );
+            router.swapExactETHForTokensSupportingFeeOnTransferTokens{
+                value: address(this).balance
+            }(1, path, address(this), block.timestamp);
 
             uint256 amount = ERC20(token).balanceOf(address(this));
             XXXToken(token).burn(amount);
         } else {
-            payable(owner).transfer(address(this).balance);
+            if (address(this).balance > 0)
+                payable(owner).transfer(address(this).balance);
         }
     }
 
