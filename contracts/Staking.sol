@@ -14,13 +14,13 @@ contract Staking is IDaoWeights {
 
     bytes32 public merkleRoot;
 
+    address private owner;
+
     uint256 public unstakeDelay = 1 days;
 
-    uint256 public immutable rewardPercent = 3;
+    uint8 public immutable rewardPercent = 3;
 
-    uint256 public immutable rewardDelay = 7 days;
-
-    address private immutable owner;
+    uint32 public immutable rewardDelay = 7 days; 
 
     ERC20 private immutable lpToken;
 
@@ -51,7 +51,11 @@ contract Staking is IDaoWeights {
         voting = IVoting(_voting);
     }
 
-    function setMerkleRoot(bytes32 _root) public {
+    function changeOwner(address _newOwner) public onlyOwner {
+        owner = _newOwner;
+    }
+
+    function setMerkleRoot(bytes32 _root) public onlyOwner {
         merkleRoot = _root;
     }
 

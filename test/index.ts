@@ -140,6 +140,9 @@ describe("ACDMPlatform", function () {
     let tx = await acdmtoken.mint(platform.address, parseUnits('100000', 6));
     await tx.wait()
 
+    tx = await staking.changeOwner(platform.address);
+    await tx.wait()
+
     await acdmtoken.connect(acc1).approve(platform.address, MaxUint256);
     await acdmtoken.connect(acc2).approve(platform.address, MaxUint256);
     await acdmtoken.connect(acc3).approve(platform.address, MaxUint256);
