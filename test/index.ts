@@ -1,9 +1,11 @@
 import { expect } from "chai";
+import { MerkleTree } from 'merkletreejs';
 import { loadFixture } from "ethereum-waffle";
 import { BigNumber, utils } from "ethers";
 //import { BigNumber } from "ethers";
 import { ethers, network } from "hardhat";
 //const hardhat = require("hardhat");
+const keccak256 = require("keccak256")
 const { parseEther, parseUnits } = ethers.utils;
 const { MaxUint256 } = ethers.constants;
 const routerAddress = process.env.UNISWAP_ROUTER_ADDRESS as string;
@@ -34,6 +36,10 @@ describe("ACDMPlatform", function () {
   let router: any;
 
   let factory: any;
+
+  let leafs: any;
+
+  let tree: any;
 
   let staking: any;
 
@@ -78,9 +84,26 @@ describe("ACDMPlatform", function () {
     await xxxtoken.approve(routerAddress, MaxUint256)
   });
 
-  step('deploy staking', async function () {
+
+  
+  step('deploy staking with markle tree', async function () {
+
+    let addresses = [
+      acc1.address,
+      acc2.address,
+      acc3.address,
+      acc4.address,
+      acc5.address,
+    ]
+    leafs = addresses.map(addr => keccak256(addr))
+    tree = new MerkleTree(leafs, keccak256, {sortPairs: true})
+    //console.log(tree.toString())
+
+    const root = tree.getRoot()
+    //console.log(root)
+
     const Staking = await ethers.getContractFactory('Staking')
-    staking = await Staking.deploy(lpToken.address, xxxtoken.address)
+    staking = await Staking.deploy(lpToken.address, xxxtoken.address, root)
     await staking.deployed()
 
     await lpToken.connect(acc1).approve(staking.address, MaxUint256);
@@ -141,29 +164,26 @@ describe("ACDMPlatform", function () {
       value: parseEther('0.000005')
     });
     await tx.wait();
-
-    // console.log(await lpToken.balanceOf(acc1.address));
-    // console.log(await lpToken.balanceOf(acc2.address));
-    // console.log(await lpToken.balanceOf(acc3.address));
-    // console.log(await lpToken.balanceOf(acc4.address));
   });
 
   step('staking', async function () {
     let amount = await lpToken.balanceOf(acc1.address)
-    let tx = await staking.stake(amount)
+    let tx = await staking.stake(amount, tree.getHexProof(leafs[0]))
     await tx.wait()
 
     amount = await lpToken.balanceOf(acc2.address)
-    tx = await staking.connect(acc2).stake(amount)
+    tx = await staking.connect(acc2).stake(amount, tree.getHexProof(leafs[1]))
     await tx.wait()
 
     amount = await lpToken.balanceOf(acc3.address)
-    tx = await staking.connect(acc3).stake(amount)
+    tx = await staking.connect(acc3).stake(amount,  tree.getHexProof(leafs[2]))
     await tx.wait()
 
     amount = await lpToken.balanceOf(acc4.address)
-    tx = await staking.connect(acc4).stake(amount)
+    tx = await staking.connect(acc4).stake(amount, tree.getHexProof(leafs[3]))
     await tx.wait()
+
+    await expect(staking.connect(acc6).stake(amount, tree.getHexProof(leafs[4]))).to.be.revertedWith("Incorrect merkle proof")
   });
 
   step('register', async function () {

@@ -4,12 +4,15 @@ pragma solidity ^0.8.0;
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./XXXToken.sol";
 import "./IDaoWeights.sol";
 import "./IVoting.sol";
 
 contract Staking is IDaoWeights {
     IVoting public voting;
+
+    bytes32 public merkleRoot;
 
     uint256 public unstakeDelay = 1 days;
 
@@ -25,6 +28,8 @@ contract Staking is IDaoWeights {
 
     mapping(address => uint256) public balances;
 
+    mapping(address => bool) private whitelistChecked;
+
     mapping(address => uint256) private startTimes;
 
     modifier onlyOwner() {
@@ -35,21 +40,32 @@ contract Staking is IDaoWeights {
         _;
     }
 
-    constructor(address _lpAddress, address _rewardAddress) {
+    constructor(address _lpAddress, address _rewardAddress, bytes32 _root) {
         owner = msg.sender;
         lpToken = ERC20(_lpAddress);
         rewardToken = XXXToken(_rewardAddress);
+        merkleRoot = _root;
     }
 
     function setVoting(address _voting) public {
         voting = IVoting(_voting);
     }
 
+    function setMerkleRoot(bytes32 _root) public {
+        merkleRoot = _root;
+    }
+
     function balanceOf(address _addr) external view override returns (uint256) {
         return balances[_addr];
     }
 
-    function stake(uint256 _amount) public {
+    function stake(uint256 _amount, bytes32[] calldata _merkleProof) public {
+        if (!whitelistChecked[msg.sender]) {
+            bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
+            require(MerkleProof.verify(_merkleProof, merkleRoot, leaf), "Incorrect merkle proof");
+            whitelistChecked[msg.sender] = true;
+        }
+
         lpToken.transferFrom(msg.sender, address(this), _amount);
         balances[msg.sender] += _amount;
 

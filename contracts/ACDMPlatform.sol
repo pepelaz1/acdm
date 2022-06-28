@@ -47,7 +47,7 @@ contract ACDMPlatform {
 
     function buy() public payable onlyRound(RoundType.SALE) {
         distributor.checkRegistration(msg.sender);
-        acdmToken.transfer(msg.sender, msg.value / acdmPrice);ÍÍ
+        acdmToken.transfer(msg.sender, msg.value / acdmPrice);
         distributor.distribute{value: msg.value}(
             currentRound.type_,
             msg.sender
