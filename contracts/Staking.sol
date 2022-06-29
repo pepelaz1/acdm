@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./XXXToken.sol";
 import "./IDaoWeights.sol";
 import "./IVoting.sol";
+import "hardhat/console.sol";
 
 contract Staking is IDaoWeights {
     IVoting public voting;
@@ -20,7 +21,7 @@ contract Staking is IDaoWeights {
 
     uint8 public immutable rewardPercent = 3;
 
-    uint32 public immutable rewardDelay = 7 days; 
+    uint32 public immutable rewardDelay = 7 days;
 
     ERC20 private immutable lpToken;
 
@@ -28,7 +29,7 @@ contract Staking is IDaoWeights {
 
     mapping(address => uint256) public balances;
 
-    mapping(address => bool) private whitelistChecked;
+    mapping(bytes32 => bool) private whitelistChecked;
 
     mapping(address => uint256) private startTimes;
 
@@ -40,7 +41,11 @@ contract Staking is IDaoWeights {
         _;
     }
 
-    constructor(address _lpAddress, address _rewardAddress, bytes32 _root) {
+    constructor(
+        address _lpAddress,
+        address _rewardAddress,
+        bytes32 _root
+    ) {
         owner = msg.sender;
         lpToken = ERC20(_lpAddress);
         rewardToken = XXXToken(_rewardAddress);
@@ -64,10 +69,14 @@ contract Staking is IDaoWeights {
     }
 
     function stake(uint256 _amount, bytes32[] calldata _merkleProof) public {
-        if (!whitelistChecked[msg.sender]) {
+        bytes32 key = keccak256(abi.encodePacked(msg.sender, merkleRoot));
+        if (!whitelistChecked[key]) {
             bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
-            require(MerkleProof.verify(_merkleProof, merkleRoot, leaf), "Incorrect merkle proof");
-            whitelistChecked[msg.sender] = true;
+            require(
+                MerkleProof.verify(_merkleProof, merkleRoot, leaf),
+                "Incorrect merkle proof"
+            );
+            whitelistChecked[key] = true;
         }
 
         lpToken.transferFrom(msg.sender, address(this), _amount);

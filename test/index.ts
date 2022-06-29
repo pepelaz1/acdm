@@ -85,7 +85,7 @@ describe("ACDMPlatform", function () {
   });
 
 
-  
+
   step('deploy staking with markle tree', async function () {
 
     let addresses = [
@@ -96,7 +96,7 @@ describe("ACDMPlatform", function () {
       acc5.address,
     ]
     leafs = addresses.map(addr => keccak256(addr))
-    tree = new MerkleTree(leafs, keccak256, {sortPairs: true})
+    tree = new MerkleTree(leafs, keccak256, { sortPairs: true })
     //console.log(tree.toString())
 
     const root = tree.getRoot()
@@ -122,6 +122,8 @@ describe("ACDMPlatform", function () {
     await dao.grantRole(await dao.CHAIRMAN_ROLE(), acc1.address)
 
     await staking.setVoting(dao.address);
+
+    await staking.changeOwner(dao.address);
   });
 
   step('deploy platform', async function () {
@@ -131,16 +133,13 @@ describe("ACDMPlatform", function () {
     await distributor.deployed()
 
     await xxxtoken.grantRole(await xxxtoken.BURNER_ROLE(), distributor.address)
-    
+
     const Platform = await ethers.getContractFactory('ACDMPlatform', acc1)
     platform = await Platform.deploy(acdmtoken.address, distributor.address)
     await platform.deployed()
 
     await acdmtoken.grantRole(await acdmtoken.MINTER_ROLE(), platform.address)
     let tx = await acdmtoken.mint(platform.address, parseUnits('100000', 6));
-    await tx.wait()
-
-    tx = await staking.changeOwner(platform.address);
     await tx.wait()
 
     await acdmtoken.connect(acc1).approve(platform.address, MaxUint256);
@@ -181,7 +180,7 @@ describe("ACDMPlatform", function () {
     await tx.wait()
 
     amount = await lpToken.balanceOf(acc3.address)
-    tx = await staking.connect(acc3).stake(amount,  tree.getHexProof(leafs[2]))
+    tx = await staking.connect(acc3).stake(amount, tree.getHexProof(leafs[2]))
     await tx.wait()
 
     amount = await lpToken.balanceOf(acc4.address)
@@ -485,4 +484,62 @@ describe("ACDMPlatform", function () {
 
   });
 
+  step('voting to change merkle tree root', async function () {
+    var abi = [
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "_root",
+            "type": "bytes32"
+          }
+        ],
+        "name": "setMerkleRoot",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ];
+
+    let addresses = [
+      acc1.address,
+      acc4.address,
+      acc5.address,
+    ]
+    leafs = addresses.map(addr => keccak256(addr))
+    tree = new MerkleTree(leafs, keccak256, { sortPairs: true })
+    //console.log(tree.toString())
+
+    const root = tree.getRoot()
+    //console.log(root)
+
+
+    const calldata = new ethers.utils.Interface(abi).encodeFunctionData('setMerkleRoot', [root]);
+
+    let tx = await dao.addProposal(staking.address, calldata, 'change merkle tree root')
+    await tx.wait()
+
+    tx = await dao.connect(acc1).vote(2, true)
+    await tx.wait()
+
+    tx = await dao.connect(acc2).vote(2, true)
+    await tx.wait()
+
+    tx = await dao.connect(acc3).vote(2, true)
+    await tx.wait()
+
+    tx = await dao.connect(acc4).vote(2, true)
+    await tx.wait()
+
+    await network.provider.send("evm_increaseTime", [daoDuration])
+
+    tx = await dao.finishProposal(2)
+    await tx.wait()
+
+    let amount = await lpToken.balanceOf(acc3.address)
+    let leaf =  keccak256(acc3.address)
+    await expect(staking.connect(acc3).stake(amount, tree.getHexProof(leaf))).to.be.revertedWith("Incorrect merkle proof")
+  });
 });
+
+
